@@ -1,53 +1,65 @@
----
+﻿---
 page_type: sample
 languages:
 - csharp
 products:
-- dotnet
-description: "Add 150 character max description"
-urlFragment: "update-this-to-unique-url-stub"
+- office-teams
+description: Scrums for channels helps you get status updates from your team in channel scope
+urlFragment: microsoft-teams-apps-scrumsforchannels
 ---
 
-# Official Microsoft Sample
+# Scrums for Channels
 
-<!-- 
-Guidelines on README format: https://review.docs.microsoft.com/help/onboard/admin/samples/concepts/readme-template?branch=master
+| [Documentation](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Home) | [Deployment guide](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Deployment-Guide) | [Architecture](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Solution-Overview) |
+| ---- | ---- | ---- |
 
-Guidance on onboarding samples to docs.microsoft.com/samples: https://review.docs.microsoft.com/help/onboard/admin/samples/process/onboarding?branch=master
+Scrums for Channels is a simple scrum assistant bot that enables users to run and schedule stand-up meetings and provide an easy way to share daily updates. The bot works in team channels and all members who have been added to a scrum team can participate in the scrum.
+The bot works great for teams that have members participating from varied geographical locations, different time zones or even fully remote teams. 
 
-Taxonomies for products and languages: https://review.docs.microsoft.com/new-hope/information-architecture/metadata/taxonomies?branch=master
--->
+Using the Scrums for Channels app in Microsoft Teams, users will be able to:
+ -  Schedule a scrum at a given time based on a time zone 
+ -  Select the team members who will be part of the scrum
+ -  Run scrums in a channel
+ -  Configure multiple scrums to run in different or same channels
+ -  Export scrum details for the past 30 days in xlsx file
 
-Give a short description for your sample here. What does it do and why is it important?
+A typical scrum workflow using the app will be:
+ - The bot will auto start the scrum at the specified time
+ - It will post an adaptive card in the channel with buttons to share status updates, view details input by other scrum members and to end the scrum. The card will also display other details like the status of the scrum (active or closed), the number of people who have contributed to the scrum and  the number of people who have marked their status as blocked
+ - Users can choose to share their updates, view details updated by other team members and end the scrum
 
-## Contents
+Here are some screenshots of a user interacting with Scrums for Channels :
 
-Outline the file contents of the repository. It helps users navigate the codebase, build configuration and any related assets.
+**Configure scrums**
 
-| File/folder       | Description                                |
-|-------------------|--------------------------------------------|
-| `src`             | Sample source code.                        |
-| `.gitignore`      | Define what to ignore at commit time.      |
-| `CHANGELOG.md`    | List of changes to the sample.             |
-| `CONTRIBUTING.md` | Guidelines for contributing to the sample. |
-| `README.md`       | This README file.                          |
-| `LICENSE`         | The license for the sample.                |
+[[https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/SettingsScreen.png|Settings screen]]
 
-## Prerequisites
+**Provide your updates when a scrum is active**
 
-Outline the required components and tools that a user might need to have on their machine in order to run the sample. This can be anything from frameworks, SDKs, OS versions or IDE releases.
+[[https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/ScrumStatus.png|Scrum status screen adaptive card with @mentions]]
 
-## Setup
 
-Explain how to prepare the sample once the user clones or downloads the repository. The section should outline every step necessary to install dependencies and set up any settings (for example, API keys and output folders).
+**View details updated by you and others**
 
-## Running the sample
+[[https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/ScrumDetails.png|Scrum details]]
 
-Outline step-by-step instructions to execute the sample and see its output. Include steps for executing the sample from the IDE, starting specific services in the Azure portal or anything related to the overall launch of the code.
+## Legal notice
 
-## Key concepts
+This app template is provided under the [MIT License](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/blob/master/LICENSE) terms.  In addition to these terms, by using this app template you agree to the following:
 
-Provide users with more context on the tools and services used in the sample. Explain some of the code that is being used and how services interact with each other.
+-	You are responsible for complying with all applicable privacy and security regulations related to use, collection and handling of any personal data by your app.  This includes complying with all internal privacy and security policies of your organization if your app is developed to be sideloaded internally within your organization.
+
+-	Where applicable, you may be responsible for data related incidents or data subject requests for data collected through your app.
+
+-	Any trademarks or registered trademarks of Microsoft in the United States and/or other countries and logos included in this repository are the property of Microsoft, and the license for this project does not grant you rights to use any Microsoft names, logos or trademarks outside of this repository.  Microsoft’s general trademark guidelines can be found [here](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general.aspx).
+
+-	Use of this template does not guarantee acceptance of your app to the Teams app store.  To make this app available in the Teams app store, you will have to comply with the [submission and validation process](https://docs.microsoft.com/en-us/microsoftteams/platform/concepts/deploy-and-publish/appsource/publish), and all associated requirements such as including your own privacy statement and terms of use for your app.
+
+## Getting started
+
+Begin with the [Solution overview](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Solution-overview) to read about what the app does and how it works.
+
+When you're ready to try out Scrums for Channels, or to use it in your own organization, follow the steps in the [Deployment guide](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/DeployementGuide).
 
 ## Contributing
 
