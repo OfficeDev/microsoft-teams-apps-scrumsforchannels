@@ -32,16 +32,16 @@ Here are some screenshots of a user interacting with Scrums for Channels :
 
 **Configure scrums**
 
-[[https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/SettingsScreen.png|Settings screen]]
+![Scrums for Channels settings task module screen](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/SettingsScreen.png)
 
 **Provide your updates when a scrum is active**
 
-[[https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/ScrumStatus.png|Scrum status screen adaptive card with @mentions]]
+![Scrum status screen adaptive card with @mentions](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/ScrumStatus.png)
 
 
 **View details updated by you and others**
 
-[[https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/ScrumDetails.png|Scrum details]]
+![Scrum details task module screen](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/ScrumDetails.png)
 
 ## Legal notice
 
@@ -59,7 +59,7 @@ This app template is provided under the [MIT License](https://github.com/OfficeD
 
 Begin with the [Solution overview](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Solution-overview) to read about what the app does and how it works.
 
-When you're ready to try out Scrums for Channels, or to use it in your own organization, follow the steps in the [Deployment guide](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/DeployementGuide).
+When you're ready to try out Scrums for Channels, or to use it in your own organization, follow the steps in the [Deployment guide](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Deployment-Guide).
 
 ## Contributing
 
