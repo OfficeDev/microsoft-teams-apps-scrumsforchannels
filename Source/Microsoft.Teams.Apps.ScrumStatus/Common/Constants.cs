@@ -52,7 +52,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <summary>
         /// Described adaptive card version to be used. Version can be upgraded or changed using this value.
         /// </summary>
-        public const string AdaptiveCardVersion = "1.2.4";
+        public const string AdaptiveCardVersion = "1.2";
 
         /// <summary>
         /// Date time format to support adaptive card text feature.
@@ -63,18 +63,8 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         public const string Rfc3339DateTimeFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'";
 
         /// <summary>
-        /// Represents general team channel.
-        /// </summary>
-        public const string GeneralChannel = "General";
-
-        /// <summary>
-        /// Represents channel conversation id.
-        /// </summary>
-        public const string ConversationChannelId = "msteams";
-
-        /// <summary>
         /// Represents channel conversation type.
         /// </summary>
-        public const string ConversationType = "channel";
+        public const string ChannelConversationType = "channel";
     }
 }

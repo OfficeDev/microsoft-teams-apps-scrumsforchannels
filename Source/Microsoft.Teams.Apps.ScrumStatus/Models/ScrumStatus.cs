@@ -31,22 +31,29 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
         public string BlockerDescription { get; set; }
 
         /// <summary>
-        /// Gets or sets date at which card is updated.
+        /// Gets or sets date on which scrum status is added by user in Rfc3339DateTimeFormat.
         /// </summary>
         [JsonProperty("CreatedOn")]
         public string CreatedOn { get; set; }
 
         /// <summary>
-        /// Gets or sets summary card id.
+        /// Gets or sets adaptive card response id to update the card after submitting scrum status.
         /// </summary>
-        [JsonProperty("SummaryCardId")]
-        public string SummaryCardId { get; set; }
+        [JsonProperty("ScrumStartCardResponseId")]
+        public string ScrumStartCardResponseId { get; set; }
 
         /// <summary>
-        /// Gets or sets member activity id to map to actions.
+        /// Gets or sets member activity id(new guid) against each user principal name to identify the valid scrum members.
+        /// Dictionary is serialized into string and will be stored in this field.
         /// </summary>
         [JsonProperty("MembersActivityIdMap")]
         public string MembersActivityIdMap { get; set; }
+
+        /// <summary>
+        /// Gets or sets Azure Active Directory object id of user.
+        /// </summary>
+        [JsonProperty("UserAadObjectId")]
+        public string UserAadObjectId { get; set; }
 
         /// <summary>
         /// Gets or sets user name.
@@ -55,9 +62,13 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
         public string Username { get; set; }
 
         /// <summary>
-        /// Gets or sets Azure Active Directory object id of user.
+        /// Gets or sets Azure Active Directory group id.
         /// </summary>
-        [JsonProperty("AadObjectId")]
-        public string AadObjectId { get; set; }
+        [JsonProperty("AadGroupId")]
+        public string AadGroupId
+        {
+            get { return this.PartitionKey; }
+            set { this.PartitionKey = value; }
+        }
     }
 }

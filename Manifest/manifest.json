@@ -15,13 +15,14 @@
     "outline": "outline.png"
   },
   "name": {
-    "short": "Scrums for channels"
+    "short": "Scrums for Channels",
+    "full": "Scrums for Channels"
   },
   "description": {
-    "short": "Scrums for channels helps you get status updates from your team in channel scope",
-    "full": "Scrums for channels is a simple scrum assistant that will enable users to run asynchronous stand-up meetings and provide an easy way for the users to share their daily updates."
+    "short": "Scrums for Channels helps you get status updates from your team.",
+    "full": "Scrums for Channels is a simple scrum assistant that will enable users to run asynchronous stand-up meetings and provide an easy way for the users to share their daily updates."
   },
-  "accentColor": "#FFFFFF",
+  "accentColor": "#FFCCD8",
   "bots": [
     {
       "botId": "<<botId>>",
@@ -36,7 +37,7 @@
           "commands": [
             {
               "title": "Open settings",
-              "description": "Open settings to add or update scrums"
+              "description": "Opens the settings task module to add or update scrums"
             },
             {
               "title": "Help",
@@ -48,10 +49,6 @@
       "supportsFiles": false,
       "isNotificationOnly": false
     }
-  ],
-  "permissions": [
-    "identity",
-    "messageTeamMembers"
   ],
   "validDomains": [
     "<<valid domains>>"

@@ -49,23 +49,23 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <returns>A task that represents scrum entity data is saved or updated.</returns>
         public async Task<bool> CreateOrUpdateScrumAsync(Scrum scrumData)
         {
+            scrumData = scrumData ?? throw new ArgumentNullException(nameof(scrumData));
+
             try
             {
                 Scrum scrumEntity = new Scrum()
                 {
-                    PartitionKey = scrumData?.ThreadConversationId,
-                    RowKey = $"{scrumData.ThreadConversationId}_{scrumData.TeamId}",
                     IsCompleted = scrumData.IsCompleted,
                     ThreadConversationId = scrumData.ThreadConversationId,
                     ScrumStartActivityId = scrumData.ScrumStartActivityId,
                     ScrumStartCardResponseId = scrumData.ScrumStartCardResponseId,
                     MembersActivityIdMap = scrumData.MembersActivityIdMap,
-                    ScrumMasterId = scrumData.ScrumMasterId,
+                    ScrumTeamConfigId = scrumData.ScrumTeamConfigId,
                     ScrumId = scrumData.ThreadConversationId,
                     ChannelName = scrumData.ChannelName,
                     TeamId = scrumData.TeamId,
                     CreatedOn = scrumData.CreatedOn,
-                    AADGroupID = scrumData.AADGroupID,
+                    AadGroupId = scrumData.AadGroupId,
                 };
 
                 await this.EnsureInitializedAsync();
@@ -75,7 +75,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
             }
             catch (Exception ex)
             {
-                this.logger.LogError(ex, $"An error occurred in CreateOrUpdateScrumAsync: ScrumMasterId : {JsonConvert.SerializeObject(scrumData)}.", SeverityLevel.Error);
+                this.logger.LogError(ex, $"An error occurred in CreateOrUpdateScrumAsync: ScrumTeamConfigId : {JsonConvert.SerializeObject(scrumData)}.", SeverityLevel.Error);
                 throw;
             }
         }
@@ -84,51 +84,48 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// Get scrum details by summary card activity id from Microsoft Azure Table storage.
         /// </summary>
         /// <param name="summaryCardActivityId">Summary card activity id.</param>
+        /// <param name="aadGroupId">Azure Active Directory group Id.</param>
         /// <returns>Returns collection of scrum details by summary card activity id.</returns>
-        public async Task<IEnumerable<Scrum>> GetScrumDetailsBySummaryCardActivityIdAsync(string summaryCardActivityId)
+        public async Task<IEnumerable<Scrum>> GetScrumsBySummaryCardActivityIdAsync(string summaryCardActivityId, string aadGroupId)
         {
-            if (string.IsNullOrEmpty(summaryCardActivityId))
-            {
-                return null;
-            }
+            summaryCardActivityId = summaryCardActivityId ?? throw new ArgumentNullException(nameof(summaryCardActivityId));
 
             try
             {
                 await this.EnsureInitializedAsync();
-                string filter = TableQuery.GenerateFilterCondition(nameof(Scrum.ScrumStartCardResponseId), QueryComparisons.Equal, summaryCardActivityId);
-                var query = new TableQuery<Scrum>().Where(filter);
-                var result = await this.CloudTable.ExecuteQuerySegmentedAsync(query, null);
-                return result;
+                string scrumCardResponseIdfilter = TableQuery.GenerateFilterCondition(nameof(Scrum.ScrumStartCardResponseId), QueryComparisons.Equal, summaryCardActivityId);
+                string aadGroupIdfilter = TableQuery.GenerateFilterCondition(nameof(ScrumConfiguration.PartitionKey), QueryComparisons.Equal, aadGroupId);
+                var combinedFilter = TableQuery.CombineFilters(scrumCardResponseIdfilter, TableOperators.And, aadGroupIdfilter);
+                return await this.GetScrumDetailsAsync(combinedFilter);
             }
             catch (Exception ex)
             {
-                this.logger.LogError(ex, $"An error occurred in GetScrumDetailsBySummaryCardActivityIdAsync: summaryCardActivityId: {summaryCardActivityId}.", SeverityLevel.Error);
+                this.logger.LogError(ex, $"An error occurred in GetScrumsBySummaryCardActivityIdAsync: summaryCardActivityId: {summaryCardActivityId}.", SeverityLevel.Error);
                 throw;
             }
         }
 
         /// <summary>
-        /// Get scrum by scrum master id from Microsoft Azure Table storage.
+        /// Get scrum by scrum team configuration id from Microsoft Azure Table storage.
         /// </summary>
-        /// <param name="scrumMasterId">Unique identifier for scrum master details.</param>
+        /// <param name="scrumTeamConfigId">Unique identifier for scrum configuration details.</param>
+        /// <param name="aadGroupId">Azure Active Directory group Id.</param>
         /// <returns>A <see cref="Task{TResult}"/>Representing the result of the asynchronous operation.</returns>
-        public async Task<IEnumerable<Scrum>> GetScrumByScrumMasterIdAsync(string scrumMasterId)
+        public async Task<IEnumerable<Scrum>> GetScrumsByScrumTeamConfigIdAsync(string scrumTeamConfigId, string aadGroupId)
         {
-            if (string.IsNullOrEmpty(scrumMasterId))
-            {
-                return null;
-            }
+            scrumTeamConfigId = scrumTeamConfigId ?? throw new ArgumentNullException(nameof(scrumTeamConfigId));
 
             try
             {
                 await this.EnsureInitializedAsync();
-                string filter = TableQuery.GenerateFilterCondition(nameof(Scrum.ScrumMasterId), QueryComparisons.Equal, scrumMasterId);
-                var query = new TableQuery<Scrum>().Where(filter);
-                return await this.CloudTable.ExecuteQuerySegmentedAsync(query, null);
+                string scrumTeamConfigIdfilter = TableQuery.GenerateFilterCondition(nameof(Scrum.ScrumTeamConfigId), QueryComparisons.Equal, scrumTeamConfigId);
+                string aadGroupIdfilter = TableQuery.GenerateFilterCondition(nameof(ScrumConfiguration.PartitionKey), QueryComparisons.Equal, aadGroupId);
+                var combinedFilter = TableQuery.CombineFilters(scrumTeamConfigIdfilter, TableOperators.And, aadGroupIdfilter);
+                return await this.GetScrumDetailsAsync(combinedFilter);
             }
             catch (Exception ex)
             {
-                this.logger.LogError(ex, $"An error occurred in GetScrumByScrumMasterIdAsync: ScrumMasterId: {scrumMasterId}. {ex.Message}", SeverityLevel.Error);
+                this.logger.LogError(ex, $"An error occurred in GetScrumByScrumTeamConfigIdAsync: ScrumTeamConfigId: {scrumTeamConfigId}. {ex.Message}", SeverityLevel.Error);
                 throw;
             }
         }
@@ -137,24 +134,23 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// Get scrum data from Microsoft Azure Table storage based on scrum start activity id.
         /// </summary>
         /// <param name="scrumStartActivityId">Scrum start activity id.</param>
+        /// <param name="aadGroupId">Azure Active Directory group Id.</param>
         /// <returns>A task that represent object to hold user profile card activity id and user profile card id.</returns>
-        public async Task<IEnumerable<Scrum>> GetScrumByScrumStartActivityIdAsync(string scrumStartActivityId)
+        public async Task<IEnumerable<Scrum>> GetScrumsByScrumStartActivityIdAsync(string scrumStartActivityId, string aadGroupId)
         {
-            if (string.IsNullOrEmpty(scrumStartActivityId))
-            {
-                return null;
-            }
+            scrumStartActivityId = scrumStartActivityId ?? throw new ArgumentNullException(nameof(scrumStartActivityId));
 
             try
             {
                 await this.EnsureInitializedAsync();
-                string filter = TableQuery.GenerateFilterCondition(nameof(Scrum.ScrumStartActivityId), QueryComparisons.Equal, scrumStartActivityId);
-                var query = new TableQuery<Scrum>().Where(filter);
-                return await this.CloudTable.ExecuteQuerySegmentedAsync(query, null);
+                string scrumStartActivityIdFilter = TableQuery.GenerateFilterCondition(nameof(Scrum.ScrumStartActivityId), QueryComparisons.Equal, scrumStartActivityId);
+                string aadGroupIdfilter = TableQuery.GenerateFilterCondition(nameof(ScrumConfiguration.PartitionKey), QueryComparisons.Equal, aadGroupId);
+                var combinedFilter = TableQuery.CombineFilters(scrumStartActivityIdFilter, TableOperators.And, aadGroupIdfilter);
+                return await this.GetScrumDetailsAsync(combinedFilter);
             }
             catch (Exception ex)
             {
-                this.logger.LogError(ex, $"An error occurred in GetScrumByScrumStartActivityIdAsync: ScrumMasterId: {scrumStartActivityId}. {ex.Message}", SeverityLevel.Error);
+                this.logger.LogError(ex, $"An error occurred in GetScrumByScrumStartActivityIdAsync: ScrumTeamConfigId: {scrumStartActivityId}. {ex.Message}", SeverityLevel.Error);
                 throw;
             }
         }
@@ -170,9 +166,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                 await this.EnsureInitializedAsync();
                 var date = DateTime.UtcNow.AddDays(-60);
                 string filter = TableQuery.GenerateFilterConditionForDate(nameof(Scrum.Timestamp), QueryComparisons.LessThan, date);
-                var query = new TableQuery<Scrum>().Where(filter);
-                var result = await this.CloudTable.ExecuteQuerySegmentedAsync(query, null);
-                return result;
+                return await this.GetScrumDetailsAsync(filter);
             }
             catch (Exception ex)
             {
@@ -191,6 +185,31 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
             await this.EnsureInitializedAsync();
             TableOperation deleteOperation = TableOperation.Delete(scrum);
             return await this.CloudTable.ExecuteAsync(deleteOperation);
+        }
+
+        /// <summary>
+        /// Get scrum collection from Microsoft Azure Table storage depending upon filter condition.
+        /// </summary>
+        /// <param name="filter">Filter condition to fetch data from storage.</param>
+        /// <returns>Returns collection of scrum details from storage.</returns>
+        private async Task<IEnumerable<Scrum>> GetScrumDetailsAsync(string filter)
+        {
+            TableQuery<Scrum> query = new TableQuery<Scrum>().Where(filter);
+            TableContinuationToken continuationToken = null;
+            var scrumCollection = new List<Scrum>();
+
+            do
+            {
+                var queryResult = await this.CloudTable.ExecuteQuerySegmentedAsync(query, continuationToken);
+                if (queryResult?.Results != null)
+                {
+                    scrumCollection.AddRange(queryResult.Results);
+                    continuationToken = queryResult.ContinuationToken;
+                }
+            }
+            while (continuationToken != null);
+
+            return scrumCollection;
         }
     }
 }

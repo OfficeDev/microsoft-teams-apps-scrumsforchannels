@@ -20,6 +20,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus
     using Microsoft.Teams.Apps.ScrumStatus.Common;
     using Microsoft.Teams.Apps.ScrumStatus.Common.Models;
     using Microsoft.Teams.Apps.ScrumStatus.Helpers;
+    using Microsoft.Teams.Apps.ScrumStatus.Models.Configuration;
 
     /// <summary>
     /// Class to extend ServiceCollection.
@@ -35,7 +36,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus
         {
             services.Configure<ScrumStatusActivityHandlerOptions>(options =>
             {
-                options.UpperCaseResponse = configuration.GetValue<bool>("UppercaseResponse");
                 options.TenantId = configuration.GetValue<string>("Bot:TenantId");
                 options.AppBaseUri = configuration.GetValue<string>("Bot:AppBaseUri");
             });
@@ -47,6 +47,16 @@ namespace Microsoft.Teams.Apps.ScrumStatus
             {
                 options.ConnectionString = configuration.GetValue<string>("Storage:ConnectionString");
             });
+            services.Configure<ExportOptions>(options =>
+            {
+                options.IsExportEnabled = configuration.GetValue<string>("Export:IsExportEnabled");
+            });
+            services.Configure<MicrosoftAppOptions>(options =>
+            {
+                options.ClientId = configuration.GetValue<string>("MicrosoftAppId");
+                options.ClientSecret = configuration.GetValue<string>("MicrosoftAppPassword");
+                options.TenantId = configuration.GetValue<string>("Bot:TenantId");
+            });
         }
 
         /// <summary>
@@ -56,7 +66,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus
         public static void AddProviders(this IServiceCollection services)
         {
             services
-                .AddTransient<IScrumMasterStorageProvider, ScrumMasterStorageProvider>();
+                .AddTransient<IScrumConfigurationStorageProvider, ScrumConfigurationStorageProvider>();
             services
                 .AddTransient<IScrumStatusStorageProvider, ScrumStatusStorageProvider>();
             services
@@ -81,7 +91,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus
             services
                 .AddSingleton<IStartScrumActivityHelper, StartScrumActivityHelper>();
             services
-                .AddHttpClient<IGraphUtilityHelper, GraphUtilityHelper>();
+                .AddSingleton<IGraphUtilityHelper, GraphUtilityHelper>();
             services
                 .AddSingleton<CardHelper>();
             services

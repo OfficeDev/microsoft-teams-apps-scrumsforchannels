@@ -23,26 +23,26 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Bot
         /// </summary>
         /// <param name="configuration">Application configurations.</param>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
-        /// <param name="scrumStatusActivityMiddleWare">Represents middle ware that can operate on incoming activities.</param>
+        /// <param name="scrumStatusActivityMiddleware">Represents middle ware that can operate on incoming activities.</param>
         /// <param name="localizer">The current cultures' string localizer.</param>
         /// <param name="conversationState">Conversation state.</param>
         /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
         public ScrumStatusAdapterWithErrorHandler(
             IConfiguration configuration,
             ILogger<IBotFrameworkHttpAdapter> logger,
-            ScrumStatusActivityMiddleWare scrumStatusActivityMiddleWare,
+            ScrumStatusActivityMiddleware scrumStatusActivityMiddleware,
             IStringLocalizer<Strings> localizer,
             ConversationState conversationState = null,
             CancellationToken cancellationToken = default)
             : base(configuration)
         {
-            if (scrumStatusActivityMiddleWare == null)
+            if (scrumStatusActivityMiddleware == null)
             {
-                throw new NullReferenceException(nameof(scrumStatusActivityMiddleWare));
+                throw new NullReferenceException(nameof(scrumStatusActivityMiddleware));
             }
 
             // Add activity middle ware to the adapter's middle ware pipeline
-            this.Use(scrumStatusActivityMiddleWare);
+            this.Use(scrumStatusActivityMiddleware);
 
             this.OnTurnError = async (turnContext, exception) =>
             {

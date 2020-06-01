@@ -1,4 +1,4 @@
-﻿// <copyright file="ScrumStatusActivityMiddleWare.cs" company="Microsoft">
+﻿// <copyright file="ScrumStatusActivityMiddleware.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
@@ -18,7 +18,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Bot
     /// <summary>
     /// Represents middle ware that can operate on incoming activities.
     /// </summary>
-    public class ScrumStatusActivityMiddleWare : IMiddleware
+    public class ScrumStatusActivityMiddleware : IMiddleware
     {
         /// <summary>
         /// Represents unique id of a Tenant.
@@ -31,22 +31,22 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Bot
         private readonly IStringLocalizer<Strings> localizer;
 
         /// <summary>
-        /// Represents a set of key/value application configuration properties for Scrum Status bot.
+        /// Represents a set of key/value application configuration properties for Scrum For Channels bot.
         /// </summary>
         private readonly IOptions<ScrumStatusActivityHandlerOptions> options;
 
         /// <summary>
         /// Sends logs to the Application Insights service.
         /// </summary>
-        private readonly ILogger<ScrumStatusActivityMiddleWare> logger;
+        private readonly ILogger<ScrumStatusActivityMiddleware> logger;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ScrumStatusActivityMiddleWare"/> class.
+        /// Initializes a new instance of the <see cref="ScrumStatusActivityMiddleware"/> class.
         /// </summary>
         /// <param name="options"> A set of key/value application configuration properties.</param>
         /// <param name="logger">Sends logs to the Application Insights service.</param>
         /// <param name="localizer">The current cultures' string localizer.</param>
-        public ScrumStatusActivityMiddleWare(IOptions<ScrumStatusActivityHandlerOptions> options, ILogger<ScrumStatusActivityMiddleWare> logger, IStringLocalizer<Strings> localizer)
+        public ScrumStatusActivityMiddleware(IOptions<ScrumStatusActivityHandlerOptions> options, ILogger<ScrumStatusActivityMiddleware> logger, IStringLocalizer<Strings> localizer)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.logger = logger;

@@ -7,7 +7,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
     using System.Collections.Generic;
     using System.Data;
     using System.Globalization;
-    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
@@ -17,6 +16,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using Microsoft.Teams.Apps.ScrumStatus.Common.Models;
     using Microsoft.Teams.Apps.ScrumStatus.Helpers;
     using Microsoft.Teams.Apps.ScrumStatus.Models;
 
@@ -61,6 +61,16 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         private readonly IOptions<ScrumStatusActivityHandlerOptions> options;
 
         /// <summary>
+        /// Gets configuration setting whether to export scrum details.
+        /// </summary>
+        private readonly IOptionsMonitor<ExportOptions> exportOption;
+
+        /// <summary>
+        /// Flag to check whether export is enabled by the user.
+        /// </summary>
+        private readonly string isExportEnabled = "True";
+
+        /// <summary>
         /// Name of excel sheet which is exported.
         /// </summary>
         private readonly string exportedSheetName = "Scrum_Report";
@@ -94,6 +104,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
         /// <param name="microsoftAppCredentials">MicrosoftAppCredentials of bot.</param>
         /// <param name="options">A set of key/value application configuration properties.</param>
+        /// <param name="exportOption">Configuration value to check whether to export scrum details.</param>
         public ArchivalBackgroundService(
           IScrumStorageProvider scrumStorageProvider,
           IScrumStatusStorageProvider scrumStatusStorageProvider,
@@ -101,7 +112,8 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
           ExportHelper exportHelper,
           ILogger<ArchivalBackgroundService> logger,
           MicrosoftAppCredentials microsoftAppCredentials,
-          IOptions<ScrumStatusActivityHandlerOptions> options)
+          IOptions<ScrumStatusActivityHandlerOptions> options,
+          IOptionsMonitor<ExportOptions> exportOption)
         {
             this.scrumStorageProvider = scrumStorageProvider;
             this.scrumStatusStorageProvider = scrumStatusStorageProvider;
@@ -110,6 +122,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
             this.logger = logger;
             this.microsoftAppCredentials = microsoftAppCredentials;
             this.options = options ?? throw new ArgumentNullException(nameof(options));
+            this.exportOption = exportOption;
         }
 
         /// <summary>
@@ -119,7 +132,11 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <returns>A task instance.</returns>
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            this.ScheduleArchivalJobAsync();
+            if (this.exportOption.CurrentValue.IsExportEnabled.Equals(this.isExportEnabled, StringComparison.OrdinalIgnoreCase))
+            {
+                this.ScheduleArchivalJob();
+            }
+
             return Task.CompletedTask;
         }
 
@@ -173,14 +190,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                 List<ScrumExport> scrumToExport = new List<ScrumExport>();
                 string filePath = string.Empty;
                 string fileName = string.Empty;
-
-                var response = await this.graphUtility.ObtainGraphTokenAsync(this.options.Value.TenantId, this.microsoftAppCredentials.MicrosoftAppId, this.microsoftAppCredentials.MicrosoftAppPassword);
-                if (response == null)
-                {
-                    this.logger.LogInformation("Response obtained from graph for access taken is null");
-                    return;
-                }
-
                 var scrum = this.scrumStorageProvider.GetScrumDetailsByTimestampAsync().Result;
                 if (scrum == null)
                 {
@@ -190,14 +199,14 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
 
                 foreach (var scrumData in scrum)
                 {
-                    if (string.IsNullOrEmpty(scrumData.AADGroupID))
+                    if (string.IsNullOrEmpty(scrumData.AadGroupId))
                     {
                         this.logger.LogInformation("AAD group id is null in scrum data in archival job");
                         continue;
                     }
 
-                    var scrumStatus = await this.scrumStatusStorageProvider.GetScrumStatusBySummaryCardIdAsync(scrumData.ScrumStartCardResponseId);
-                    var driveDetails = await this.graphUtility.GetDriveDetailsAsync(response.AccessToken, scrumData.AADGroupID);
+                    var scrumStatus = await this.scrumStatusStorageProvider.GetScrumStatusBySummaryCardIdAsync(scrumData.ScrumStartCardResponseId, scrumData.AadGroupId);
+                    var driveDetails = await this.graphUtility.GetDriveDetailsAsync(scrumData.AadGroupId);
                     scrumToExport = scrumStatus.Select(
                                                         scrumExport => new ScrumExport
                                                         {
@@ -208,26 +217,23 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                                                             PlanForToday = scrumExport.TodayTaskDescription,
                                                         }).ToList();
                     fileName = this.GetCurrentTimestamp() + ".xlsx";
-                    filePath = $"{scrumData.ChannelName}/ScrumReports/{scrumData.ScrumMasterId.Split("_")[0]}/{fileName}";
+                    filePath = $"{scrumData.ChannelName}/ScrumReports/{scrumData.ScrumTeamConfigId.Split("_")[0]}/{fileName}";
                     using (this.scrumStatusExportDataTable = this.exportHelper.ConvertToDataTable(scrumToExport, this.exportedSheetName))
                     {
-                        using (MemoryStream stream = this.exportHelper.ExportToExcel(this.scrumStatusExportDataTable))
+                        var uploadContext = await this.graphUtility.PutAsync(this.scrumStatusExportDataTable, filePath, driveDetails.Id);
+                        if (uploadContext != null)
                         {
-                            var uploadContext = await this.graphUtility.PutAsync(response.AccessToken, stream, filePath, driveDetails.Id);
-                            if (uploadContext != null)
+                            this.logger.LogInformation($"File uploaded- {fileName}");
+                            if (scrumStatus.Any())
                             {
-                                this.logger.LogInformation($"File uploaded- {fileName}");
-                                if (scrumStatus.Any())
-                                {
-                                    await this.DeleteScrumStatusAsync(scrumStatus);
-                                }
+                                await this.DeleteScrumStatusAsync(scrumStatus);
+                            }
 
-                                await this.DeleteScrumAsync(scrumData);
-                            }
-                            else
-                            {
-                                this.logger.LogInformation($"Error while uploading the file- {fileName}");
-                            }
+                            await this.DeleteScrumAsync(scrumData);
+                        }
+                        else
+                        {
+                            this.logger.LogInformation($"Error while uploading the file- {fileName}");
                         }
                     }
                 }
@@ -251,8 +257,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <summary>
         /// Set the timer and enqueue start scrum task if timer matched as per CRON expression.
         /// </summary>
-        /// <returns>A task that Enqueue sends notification task.</returns>
-        private Task ScheduleArchivalJobAsync()
+        private void ScheduleArchivalJob()
         {
             var count = Interlocked.Increment(ref this.executionCount);
             this.logger.LogInformation($"Start scrum Hosted Service is working. Count: {count}");
@@ -273,17 +278,15 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                     if (lastDayOfMonth.Equals(next.Value.Day))
                     {
                         this.logger.LogInformation($"Last day of the month {lastDayOfMonth} and exporting the data.");
-                        this.GetArchivalDataAsync();
+                        Task.Run(() => this.GetArchivalDataAsync()).Wait();
                     }
 
-                    this.ScheduleArchivalJobAsync();    // reschedule next
+                    this.ScheduleArchivalJob();    // reschedule next
                 };
 
                 this.archivalJobTimer.AutoReset = false;
                 this.archivalJobTimer.Start();
             }
-
-            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -299,11 +302,11 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                     var deleteResponse = await this.scrumStatusStorageProvider.DeleteEntityAsync(scrumStatus);
                     if (deleteResponse != null)
                     {
-                        this.logger.LogInformation($"Scrum status deleted: {scrumStatus.AadObjectId}");
+                        this.logger.LogInformation($"Scrum status deleted: {scrumStatus.UserAadObjectId}");
                     }
                     else
                     {
-                        this.logger.LogInformation($"Scrum status deletion failed: {scrumStatus.AadObjectId}");
+                        this.logger.LogInformation($"Scrum status deletion failed: {scrumStatus.UserAadObjectId}");
                     }
                 }
             }
@@ -325,11 +328,11 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                 var deleteResponse = await this.scrumStorageProvider.DeleteEntityAsync(scrum);
                 if (deleteResponse != null)
                 {
-                    this.logger.LogInformation($"Scrum deleted for scrum master id: {scrum.ScrumMasterId}");
+                    this.logger.LogInformation($"Scrum deleted for scrum team configuration id: {scrum.ScrumTeamConfigId}");
                 }
                 else
                 {
-                    this.logger.LogInformation($"Scrum deletion failed for scrum master id: {scrum.ScrumMasterId}");
+                    this.logger.LogInformation($"Scrum deletion failed for scrum team configuration id: {scrum.ScrumTeamConfigId}");
                 }
             }
             catch (Exception ex)

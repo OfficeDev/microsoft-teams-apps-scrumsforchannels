@@ -142,11 +142,29 @@ namespace Microsoft.Teams.Apps.ScrumStatus {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to No scrum members present in this scrum..
+        /// </summary>
+        public static string ErrorNoScrumMembersPresent {
+            get {
+                return ResourceManager.GetString("ErrorNoScrumMembersPresent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Something went wrong saving this info. Try again in a few minutes..
         /// </summary>
         public static string ErrorSavingScrumData {
             get {
                 return ResourceManager.GetString("ErrorSavingScrumData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0}, this scrum has been deleted or inactive..
+        /// </summary>
+        public static string ErrorScrumConfigurationDetailsNullOrInactive {
+            get {
+                return ResourceManager.GetString("ErrorScrumConfigurationDetailsNullOrInactive", resourceCulture);
             }
         }
         
@@ -169,15 +187,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}, this scrum has been deleted or inactive..
-        /// </summary>
-        public static string ErrorScrumMasterDetailsNullOrInactive {
-            get {
-                return ResourceManager.GetString("ErrorScrumMasterDetailsNullOrInactive", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to {0}, only members of this scrum can do this. Ask a colleague to add you..
         /// </summary>
         public static string ErrorUserIsNotPartOfRunningScrumAndTryToEndScrum {
@@ -196,20 +205,20 @@ namespace Microsoft.Teams.Apps.ScrumStatus {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to General.
+        /// </summary>
+        public static string GeneralChannel {
+            get {
+                return ResourceManager.GetString("GeneralChannel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to I want to help you! Select or type one of these commands:.
         /// </summary>
         public static string HelpCardTitleText {
             get {
                 return ResourceManager.GetString("HelpCardTitleText", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to I am currently designed to work only in Teams scope. Please install me in a channel of a Teams to start tracking your scrum updates..
-        /// </summary>
-        public static string InformationAboutBotInstallationLimitation {
-            get {
-                return ResourceManager.GetString("InformationAboutBotInstallationLimitation", resourceCulture);
             }
         }
         

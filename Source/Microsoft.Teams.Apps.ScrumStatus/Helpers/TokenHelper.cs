@@ -32,7 +32,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <summary>
         /// Initializes a new instance of the <see cref="TokenHelper"/> class.
         /// </summary>
-        /// <param name="scrumStatusActivityHandlerOptions">A set of key/value application configuration properties for Scrum Status bot.</param>
+        /// <param name="scrumStatusActivityHandlerOptions">A set of key/value application configuration properties for Scrum For Channels bot.</param>
         /// <param name="tokenOptions">A set of key/value application configuration properties for token.</param>
         public TokenHelper(
             IOptionsMonitor<ScrumStatusActivityHandlerOptions> scrumStatusActivityHandlerOptions,

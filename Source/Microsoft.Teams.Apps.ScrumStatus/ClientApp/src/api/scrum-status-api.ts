@@ -16,20 +16,22 @@ const baseAxiosUrl = window.location.origin;
 * @param teamId {String} Team ID for getting members.
 */
 export const getTeamDetails = async (token: string, teamId: string): Promise<AxiosResponse<ITeamDetails>> => {
-    let url = baseAxiosUrl + "/api/scrummaster/teamdetails?teamId=" + teamId;
+
+    let url = baseAxiosUrl + "/api/scrumconfiguration/teamdetails?teamId=" + teamId;
     let teamDetailsResponse = await axios.get(url, token);
     return teamDetailsResponse;
 }
 
 /**
-* Get scrum master details by Azure Active Directory group id of team.
+* Get scrum configuration details by Azure Active Directory group id of team.
 * @param token {String | Null} Custom JWT token.
 * @param groupID {String | Null} Azure Active Directory group Id.
 */
-export const getScrumMasterDetailsbyAADGroupID = async (token: string, groupID: string): Promise<AxiosResponse<IScrumProps[]>> => {
-    let url = baseAxiosUrl + "/api/scrummaster/scrummasterdetails?groupId=" + groupID;
-    let scrumMasterDetailsResponse = await axios.get(url, token);
-    return scrumMasterDetailsResponse;
+export const getScrumConfigurationDetailsbyAADGroupID = async (token: string, groupID: string): Promise<AxiosResponse<IScrumProps[]>> => {
+
+    let url = baseAxiosUrl + "/api/scrumconfiguration/scrumconfigurationdetails?groupId=" + groupID;
+    let scrumConfigurationDetailsResponse = await axios.get(url, token);
+    return scrumConfigurationDetailsResponse;
 }
 
 /**
@@ -37,7 +39,8 @@ export const getScrumMasterDetailsbyAADGroupID = async (token: string, groupID: 
 * @param token {String | Null} Custom JWT token.
 */
 export const getTimeZoneInfo = async (token: string): Promise<any> => {
-    let url = baseAxiosUrl + "/api/scrummaster/timezoneinfo";
+
+    let url = baseAxiosUrl + "/api/scrumconfiguration/timezoneinfo";
     let timeZoneInfoResponse = await axios.get(url, token);
     return timeZoneInfoResponse;
 }
@@ -56,23 +59,23 @@ export const getResourceStrings = async (token: string, locale?: string | null):
 /**
 * Get localized resource strings from API.
 * @param token {String | Null} Custom JWT token.
-* @param scrumMasterDetails {Object} Scrum master details to be stored in storage.
+* @param scrumConfigurationDetails {Object} scrum configuration details to be stored in storage.
 */
-export const saveScrumMasterDetails = async (token: string, scrumMasterDetails: {}): Promise<AxiosResponse<void>> => {
-    let url = baseAxiosUrl + "/api/scrummaster/scrummasterdetails";
-    let saveScrumMasterDetailsResponse = await axios.post(url, scrumMasterDetails, token);
-    return saveScrumMasterDetailsResponse;
+export const saveScrumConfigurationDetails = async (token: string, scrumConfigurationDetails: {}): Promise<AxiosResponse<void>> => {
+    let url = baseAxiosUrl + "/api/scrumconfiguration/scrumconfigurationdetails";
+    let saveScrumConfigurationDetailsResponse = await axios.post(url, scrumConfigurationDetails, token);
+    return saveScrumConfigurationDetailsResponse;
 }
 
 /**
 * Get localized resource strings from API.
 * @param token {String | Null} Custom JWT token.
-* @param scrumMasterDetails {Object} Scrum master details to be deleted from storage.
+* @param scrumConfigurationDetails {Object} Scrum configuration details to be deleted from storage.
 */
-export const deleteScrumMasterDetails = async (token: string, scrumMasterDetails: {}): Promise<AxiosResponse<void>> => {
-    let url = baseAxiosUrl + "/api/scrummaster/scrummasterdetails";
-    let deleteScrumMasterDetailsResponse = await axios.delete(url, scrumMasterDetails, token);
-    return deleteScrumMasterDetailsResponse;
+export const deleteScrumConfigurationDetails = async (token: string, scrumConfigurationDetails: {}): Promise<AxiosResponse<void>> => {
+    let url = baseAxiosUrl + "/api/scrumconfiguration/scrumconfigurationdetails";
+    let deleteScrumConfigurationDetailsResponse = await axios.delete(url, scrumConfigurationDetails, token);
+    return deleteScrumConfigurationDetailsResponse;
 }
 
 /**

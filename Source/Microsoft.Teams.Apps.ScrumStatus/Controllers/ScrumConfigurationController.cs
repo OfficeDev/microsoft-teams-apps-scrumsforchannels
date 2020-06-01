@@ -1,4 +1,4 @@
-﻿// <copyright file="ScrumMasterController.cs" company="Microsoft">
+﻿// <copyright file="ScrumConfigurationController.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
@@ -25,10 +25,10 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
     /// <summary>
     /// Controller to handle Scrum API operations.
     /// </summary>
-    [Route("api/scrummaster")]
+    [Route("api/scrumconfiguration")]
     [ApiController]
     [Authorize]
-    public class ScrumMasterController : BaseScrumStatusController
+    public class ScrumConfigurationController : BaseScrumStatusController
     {
         /// <summary>
         /// Microsoft Application ID.
@@ -41,14 +41,14 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
         private readonly ILogger logger;
 
         /// <summary>
-        /// Scrum Status Bot adapter to get context.
+        /// Scrum For Channels bot adapter to get context.
         /// </summary>
         private readonly BotFrameworkAdapter botAdapter;
 
         /// <summary>
-        /// Provider to store scrum master details in Azure Table Storage.
+        /// Provider to store scrum configuration details in Azure Table Storage.
         /// </summary>
-        private readonly IScrumMasterStorageProvider scrumMasterStorageProvider;
+        private readonly IScrumConfigurationStorageProvider scrumConfigurationStorageProvider;
 
         /// <summary>
         /// Instance of class that handles scrum helper methods.
@@ -61,19 +61,19 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
         private readonly IOptions<ScrumStatusActivityHandlerOptions> options;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ScrumMasterController"/> class.
+        /// Initializes a new instance of the <see cref="ScrumConfigurationController"/> class.
         /// </summary>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
-        /// <param name="botAdapter">Scrum Status bot adapter.</param>
+        /// <param name="botAdapter">Scrum For Channels bot adapter.</param>
         /// <param name="microsoftAppCredentials">Microsoft Application credentials for Bot/ME.</param>
-        /// <param name="scrumMasterStorageProvider">Provider to store scrum master details in Azure Table Storage.</param>
+        /// <param name="scrumConfigurationStorageProvider">Provider to store scrum configuration details in Azure Table Storage.</param>
         /// <param name="scrumHelper">Instance of class that handles scrum helper methods.</param>
         /// <param name="options">A set of key/value application configuration properties.</param>
-        public ScrumMasterController(
-            ILogger<ScrumMasterController> logger,
+        public ScrumConfigurationController(
+            ILogger<ScrumConfigurationController> logger,
             BotFrameworkAdapter botAdapter,
             MicrosoftAppCredentials microsoftAppCredentials,
-            IScrumMasterStorageProvider scrumMasterStorageProvider,
+            IScrumConfigurationStorageProvider scrumConfigurationStorageProvider,
             ScrumHelper scrumHelper,
             IOptions<ScrumStatusActivityHandlerOptions> options)
             : base()
@@ -81,7 +81,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
             this.logger = logger;
             this.botAdapter = botAdapter;
             this.appId = microsoftAppCredentials != null ? microsoftAppCredentials.MicrosoftAppId : throw new ArgumentNullException(nameof(microsoftAppCredentials));
-            this.scrumMasterStorageProvider = scrumMasterStorageProvider;
+            this.scrumConfigurationStorageProvider = scrumConfigurationStorageProvider;
             this.scrumHelper = scrumHelper;
             this.options = options ?? throw new ArgumentNullException(nameof(options));
         }
@@ -104,8 +104,8 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
                 {
                     ChannelId = teamId,
                     ServiceUrl = userClaims.ServiceUrl,
-                    Bot = new ChannelAccount() { Id = this.appId },
-                    Conversation = new ConversationAccount() { ConversationType = Constants.ConversationType, IsGroup = true, Id = teamId, TenantId = this.options.Value.TenantId },
+                    Bot = new ChannelAccount() { Id = $"28:{this.appId}" },
+                    Conversation = new ConversationAccount() { ConversationType = Constants.ChannelConversationType, IsGroup = true, Id = teamId, TenantId = this.options.Value.TenantId },
                 };
 
                 await this.botAdapter.ContinueConversationAsync(
@@ -127,7 +127,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
                     default);
 
                 this.logger.LogInformation("GET call for fetching team members and channels from team roster is successful");
-                teamsChannelInfo.First(channel => channel.Name == null).Name = Constants.GeneralChannel;
+                teamsChannelInfo.First(channel => channel.Name == null).Name = Strings.GeneralChannel;
                 var teamDetails = new
                 {
                     TeamMembers = teamsChannelAccounts.Select(member => new { content = member.Email, header = member.Name, aadobjectid = member.AadObjectId }),
@@ -144,25 +144,23 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
         }
 
         /// <summary>
-        /// Get scrum master details by Azure Active Directory group Id.
+        /// Get scrum configuration details by Azure Active Directory group Id.
         /// </summary>
         /// <param name="groupId">Azure Active Directory group Id.</param>
-        /// <returns>Returns scrum master details.</returns>
-        [HttpGet("scrummasterdetails")]
-        public async Task<IActionResult> GetScrumMasterDetailsByAADGroupIDAsync([FromQuery]string groupId)
+        /// <returns>Returns scrum configuration details.</returns>
+        [HttpGet("scrumconfigurationdetails")]
+        public async Task<IActionResult> GetScrumConfigurationDetailsByAADGroupIDAsync([FromQuery]string groupId)
         {
             try
             {
-                this.logger.LogInformation("Initiated call for fetching scrum master details from storage");
-                var scrumMasterDetails = await this.scrumMasterStorageProvider.GetScrumMasterDetailsbyAADGroupIDAsync(groupId);
-                this.logger.LogInformation("GET call for fetching scrum master details from storage is successful");
-                return this.Ok(scrumMasterDetails);
+                this.logger.LogInformation("Initiated call for fetching scrum configuration details from storage");
+                var scrumConfigurationDetails = await this.scrumConfigurationStorageProvider.GetScrumConfigurationDetailsbyAADGroupIDAsync(groupId);
+                this.logger.LogInformation("GET call for fetching scrum configuration details from storage is successful");
+                return this.Ok(scrumConfigurationDetails);
             }
-            #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
-            #pragma warning restore CA1031 // Do not catch general exception types
             {
-                this.logger.LogError(ex, "Error while getting scrum master details.");
+                this.logger.LogError(ex, "Error while getting scrum configuration details.");
                 throw;
             }
         }
@@ -182,9 +180,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
                 this.logger.LogInformation("GET call for fetching time zone information is successful");
                 return this.Ok(timeZoneDetails);
             }
-            #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
-            #pragma warning restore CA1031 // Do not catch general exception types
             {
                 this.logger.LogError(ex, "Error while getting time zone information.");
                 throw;
@@ -192,60 +188,56 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
         }
 
         /// <summary>
-        /// Post call to save scrum master details in Azure Table storage.
+        /// Post call to save scrum configuration details in Azure Table storage.
         /// </summary>
-        /// <param name="scrumMastersData">Class contains details of scrum master details.</param>
+        /// <param name="scrumConfigurationData">Class contains details of scrum configuration details.</param>
         /// <returns>Returns true for successful operation.</returns>
-        [HttpPost("scrummasterdetails")]
-        public async Task<IActionResult> SaveScrumMasterDetailsAsync([FromBody]IEnumerable<ScrumMaster> scrumMastersData)
+        [HttpPost("scrumconfigurationdetails")]
+        public async Task<IActionResult> SaveScrumConfigurationDetailsAsync([FromBody]IEnumerable<ScrumConfiguration> scrumConfigurationData)
         {
             try
             {
-                if (scrumMastersData == null)
+                if (scrumConfigurationData == null)
                 {
-                    return this.BadRequest();
+                    return this.BadRequest("No data received to be stored in Microsoft Azure Table storage");
                 }
 
-                this.logger.LogInformation("Initiated call to scrum master storage provider.");
-                scrumMastersData = this.scrumHelper.GetScrumMasterEntities(scrumMastersData)?.ToList();
-                var result = await this.scrumMasterStorageProvider.StoreOrUpdateScrumMasterEntitiesAsync(scrumMastersData);
-                this.logger.LogInformation("POST call for saving scrum master details in storage is successful");
+                this.logger.LogInformation("Initiated call to scrum configuration storage provider.");
+                scrumConfigurationData = this.scrumHelper.GetScrumConfigurationEntities(scrumConfigurationData)?.ToList();
+                var result = await this.scrumConfigurationStorageProvider.StoreOrUpdateScrumConfigurationEntitiesAsync(scrumConfigurationData);
+                this.logger.LogInformation("POST call for saving scrum configuration details in storage is successful");
                 return this.Ok(result);
             }
-            #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
-            #pragma warning restore CA1031 // Do not catch general exception types
             {
-                this.logger.LogError(ex, "Error while saving scrum master details.");
+                this.logger.LogError(ex, "Error while saving scrum configuration details.");
                 throw;
             }
         }
 
         /// <summary>
-        /// Put call to delete specified scrum master details from Azure Table storage.
+        /// Put call to delete specified scrum configuration details from Azure Table storage.
         /// </summary>
-        /// <param name="scrumMastersDataToBeDeleted">Class contains details of scrum master details to be deleted.</param>
+        /// <param name="scrumConfigurationDataToBeDeleted">Class contains details of scrum configuration details to be deleted.</param>
         /// <returns>Returns true for successful operation.</returns>
-        [HttpDelete("scrummasterdetails")]
-        public async Task<IActionResult> DeleteScrumMasterDetailsAsync([FromBody]IEnumerable<ScrumMaster> scrumMastersDataToBeDeleted)
+        [HttpDelete("scrumconfigurationdetails")]
+        public async Task<IActionResult> DeleteScrumConfigurationDetailsAsync([FromBody]IEnumerable<ScrumConfiguration> scrumConfigurationDataToBeDeleted)
         {
             try
             {
-                if (scrumMastersDataToBeDeleted == null)
+                if (scrumConfigurationDataToBeDeleted == null)
                 {
-                    return this.BadRequest();
+                    return this.BadRequest("No data received to be deleted from Microsoft Azure Table storage");
                 }
 
-                this.logger.LogInformation("Initiated call to scrum master storage provider service to delete scrum master details.");
-                var result = await this.scrumMasterStorageProvider.DeleteScrumMasterDetailsAsync(scrumMastersDataToBeDeleted);
-                this.logger.LogInformation("PUT call for deleting scrum master details in storage is successful");
+                this.logger.LogInformation("Initiated call to scrum configuration storage provider service to delete scrum configuration details.");
+                var result = await this.scrumConfigurationStorageProvider.DeleteScrumConfigurationDetailsAsync(scrumConfigurationDataToBeDeleted);
+                this.logger.LogInformation("PUT call for deleting scrum configuration details in storage is successful");
                 return this.Ok(result);
             }
-            #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
-            #pragma warning restore CA1031 // Do not catch general exception types
             {
-                this.logger.LogError(ex, "Error while deleting scrum master details.");
+                this.logger.LogError(ex, "Error while deleting scrum configuration details.");
                 throw;
             }
         }

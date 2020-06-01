@@ -52,17 +52,19 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         {
             try
             {
+                scrumStatusData = scrumStatusData ?? throw new ArgumentNullException(nameof(scrumStatusData));
+
                 ScrumStatus scrumStatusDataEntity = new ScrumStatus()
                 {
-                    PartitionKey = scrumStatusData?.SummaryCardId.Trim() + "_" + scrumStatusData.Username,
+                    RowKey = $"{scrumStatusData?.ScrumStartCardResponseId.Trim()}_{scrumStatusData.Username}",
                     TodayTaskDescription = scrumStatusData.TodayTaskDescription,
                     YesterdayTaskDescription = scrumStatusData.YesterdayTaskDescription,
                     BlockerDescription = scrumStatusData.BlockerDescription,
-                    SummaryCardId = scrumStatusData.SummaryCardId.Trim(),
+                    ScrumStartCardResponseId = scrumStatusData.ScrumStartCardResponseId,
                     Username = scrumStatusData.Username,
-                    AadObjectId = scrumStatusData.AadObjectId,
+                    AadGroupId = scrumStatusData.AadGroupId,
+                    UserAadObjectId = scrumStatusData.UserAadObjectId,
                     MembersActivityIdMap = scrumStatusData.MembersActivityIdMap,
-                    RowKey = scrumStatusData.SummaryCardId.Trim(),
                     CreatedOn = scrumStatusData.CreatedOn,
                 };
 
@@ -82,20 +84,35 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// Get scrum status by summary card id from Microsoft Azure Table storage.
         /// </summary>
         /// <param name="summaryCardId">Scrum summary response card Id.</param>
+        /// <param name="aadGroupId">Azure Active Directory group Id.</param>
         /// <returns>Returns collection of scrum status details.</returns>
-        public async Task<IEnumerable<ScrumStatus>> GetScrumStatusBySummaryCardIdAsync(string summaryCardId)
+        public async Task<IEnumerable<ScrumStatus>> GetScrumStatusBySummaryCardIdAsync(string summaryCardId, string aadGroupId)
         {
-            if (string.IsNullOrEmpty(summaryCardId))
-            {
-                return null;
-            }
+            summaryCardId = summaryCardId ?? throw new ArgumentNullException(nameof(summaryCardId));
 
             try
             {
                 await this.EnsureInitializedAsync();
-                string filter = TableQuery.GenerateFilterCondition(nameof(ScrumStatus.SummaryCardId), QueryComparisons.Equal, summaryCardId.Trim());
-                var query = new TableQuery<ScrumStatus>().Where(filter);
-                return await this.CloudTable.ExecuteQuerySegmentedAsync(query, null);
+                string scrumStartCardResponseIdFilter = TableQuery.GenerateFilterCondition(nameof(ScrumStatus.ScrumStartCardResponseId), QueryComparisons.Equal, summaryCardId);
+                string aadGroupIdfilter = TableQuery.GenerateFilterCondition(nameof(ScrumConfiguration.PartitionKey), QueryComparisons.Equal, aadGroupId);
+                var combinedFilter = TableQuery.CombineFilters(scrumStartCardResponseIdFilter, TableOperators.And, aadGroupIdfilter);
+
+                TableQuery<ScrumStatus> query = new TableQuery<ScrumStatus>().Where(combinedFilter);
+                TableContinuationToken continuationToken = null;
+                var scrumStatusCollection = new List<ScrumStatus>();
+
+                do
+                {
+                    var queryResult = await this.CloudTable.ExecuteQuerySegmentedAsync(query, continuationToken);
+                    if (queryResult?.Results != null)
+                    {
+                        scrumStatusCollection.AddRange(queryResult.Results);
+                        continuationToken = queryResult.ContinuationToken;
+                    }
+                }
+                while (continuationToken != null);
+
+                return scrumStatusCollection;
             }
             catch (Exception ex)
             {

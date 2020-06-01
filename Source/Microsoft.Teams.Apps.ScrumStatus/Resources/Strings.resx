@@ -293,10 +293,6 @@
     <value>{0}, only members of this scrum can do this. Ask a colleague to add you.</value>
     <comment>Error message to show that user is not part of running scrum and clicks on end scrum.</comment>
   </data>
-  <data name="InformationAboutBotInstallationLimitation" xml:space="preserve">
-    <value>I am currently designed to work only in Teams scope. Please install me in a channel of a Teams to start tracking your scrum updates.</value>
-    <comment>Information about bot installation limitation.</comment>
-  </data>
   <data name="UpdateStatusButtonText" xml:space="preserve">
     <value>Update status</value>
     <comment>Text to show on update status button.</comment>
@@ -349,9 +345,9 @@
     <value>Closed</value>
     <comment>Text that represents scrum is completed.</comment>
   </data>
-  <data name="ErrorScrumMasterDetailsNullOrInactive" xml:space="preserve">
+  <data name="ErrorScrumConfigurationDetailsNullOrInactive" xml:space="preserve">
     <value>{0}, this scrum has been deleted or inactive.</value>
-    <comment>Error message to show if scrum master details are null or scrum is inactive.</comment>
+    <comment>Error message to show if scrum configuration details are null or scrum is inactive.</comment>
   </data>
   <data name="ErrorScrumDoesNotExist" xml:space="preserve">
     <value>{0}, this scrum has been deleted.</value>
@@ -391,6 +387,13 @@
   </data>
   <data name="ErrorScrumDeleted" xml:space="preserve">
     <value>{0} scrum has been deleted.</value>
-    <comment>Error message to show when scrum master details have been deleted from storage.</comment>
+    <comment>Error message to show when scrum configuration details have been deleted from storage.</comment>
+  </data>
+  <data name="ErrorNoScrumMembersPresent" xml:space="preserve">
+    <value>No scrum members present in this scrum.</value>
+    <comment>Error message to show when there are no scrum members in the scrum.</comment>
+  </data>
+  <data name="GeneralChannel" xml:space="preserve">
+    <value>General</value>
   </data>
 </root>

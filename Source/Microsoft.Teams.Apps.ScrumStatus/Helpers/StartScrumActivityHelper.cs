@@ -18,6 +18,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
     using Microsoft.Bot.Builder.Teams;
     using Microsoft.Bot.Connector.Authentication;
     using Microsoft.Bot.Schema;
+    using Microsoft.Bot.Schema.Teams;
     using Microsoft.Extensions.Localization;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -35,6 +36,11 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
     /// </summary>
     public class StartScrumActivityHelper : IStartScrumActivityHelper
     {
+        /// <summary>
+        /// Represents channel conversation id.
+        /// </summary>
+        public const string ChannelConversationId = "msteams";
+
         /// <summary>
         /// Represents retry delay.
         /// </summary>
@@ -92,15 +98,15 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         private readonly IScrumStorageProvider scrumStorageProvider;
 
         /// <summary>
-        /// Storage helper for working with scrum master data in Microsoft Azure Table storage.
+        /// Storage helper for working with scrum configuration data in Microsoft Azure Table storage.
         /// </summary>
-        private readonly IScrumMasterStorageProvider scrumMasterStorageProvider;
+        private readonly IScrumConfigurationStorageProvider scrumConfigurationStorageProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StartScrumActivityHelper"/> class.
         /// </summary>
         /// <param name="scrumStorageProvider">Instance for scrumStorageProvider.</param>
-        /// <param name="scrumMasterStorageProvider">Scrum master storage provider to maintain data in Microsoft Azure table storage.</param>
+        /// <param name="scrumConfigurationStorageProvider">Scrum configuration storage provider to maintain data in Microsoft Azure table storage.</param>
         /// <param name="cardHelper">Instance of card helper to send class details.</param>
         /// <param name="scrumHelper">Instance of class that handles scrum helper methods.</param>
         /// <param name="microsoftAppCredentials">Instance for Microsoft application credentials.</param>
@@ -110,7 +116,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <param name="localizer">The current cultures' string localizer.</param>
         public StartScrumActivityHelper(
             IScrumStorageProvider scrumStorageProvider,
-            IScrumMasterStorageProvider scrumMasterStorageProvider,
+            IScrumConfigurationStorageProvider scrumConfigurationStorageProvider,
             CardHelper cardHelper,
             ScrumHelper scrumHelper,
             MicrosoftAppCredentials microsoftAppCredentials,
@@ -119,13 +125,13 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
             ILogger<StartScrumActivityHelper> logger,
             IStringLocalizer<Strings> localizer)
         {
+            this.options = options;
             this.scrumStorageProvider = scrumStorageProvider;
-            this.scrumMasterStorageProvider = scrumMasterStorageProvider;
+            this.scrumConfigurationStorageProvider = scrumConfigurationStorageProvider;
             this.cardHelper = cardHelper;
             this.scrumHelper = scrumHelper;
             this.microsoftAppCredentials = microsoftAppCredentials;
             this.adapter = adapter;
-            this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.logger = logger;
             this.localizer = localizer;
         }
@@ -133,58 +139,55 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <summary>
         /// Method ends the existing scrum if running and then sends the start scrum card.
         /// </summary>
-        /// <param name="scrumMaster">Scrum master details obtained from storage.</param>
+        /// <param name="scrumConfiguration">Scrum configuration details obtained from storage.</param>
         /// <returns>A task that ends the existing scrum and sends the start scrum card .</returns>
-        public async Task ScrumStartActivityAsync(ScrumMaster scrumMaster)
+        public async Task ScrumStartActivityAsync(ScrumConfiguration scrumConfiguration)
         {
-            if (scrumMaster != null)
+            try
             {
-                try
+                string serviceUrl = scrumConfiguration.ServiceUrl;
+                MicrosoftAppCredentials.TrustServiceUrl(serviceUrl);
+
+                var conversationReference = new ConversationReference()
                 {
-                    string serviceUrl = scrumMaster.ServiceUrl;
-                    MicrosoftAppCredentials.TrustServiceUrl(serviceUrl);
+                    ChannelId = ChannelConversationId,
+                    Bot = new ChannelAccount() { Id = $"28:{this.microsoftAppCredentials.MicrosoftAppId}" },
+                    ServiceUrl = serviceUrl,
+                    Conversation = new ConversationAccount() { ConversationType = Constants.ChannelConversationType, IsGroup = true, Id = scrumConfiguration.ChannelId, TenantId = this.options.Value.TenantId },
+                };
 
-                    var conversationReference = new ConversationReference()
+                this.logger.LogInformation($"Sending start scrum card to channelId: {scrumConfiguration.ChannelId}");
+
+                await RetryPolicy.ExecuteAsync(async () =>
+                {
+                    try
                     {
-                        ChannelId = Constants.ConversationChannelId,
-                        Bot = new ChannelAccount() { Id = this.microsoftAppCredentials.MicrosoftAppId },
-                        ServiceUrl = serviceUrl,
-                        Conversation = new ConversationAccount() { ConversationType = Constants.ConversationType, IsGroup = true, Id = scrumMaster.ChannelId, TenantId = this.options.Value.TenantId },
-                    };
-
-                    this.logger.LogInformation($"Sending start scrum command to channelId- {scrumMaster.ChannelId}");
-
-                    await RetryPolicy.ExecuteAsync(async () =>
-                    {
-                        try
-                        {
-                            await ((BotFrameworkAdapter)this.adapter).ContinueConversationAsync(
-                                this.microsoftAppCredentials.MicrosoftAppId,
-                                conversationReference,
-                                async (conversationTurnContext, conversationCancellationToken) =>
+                        await ((BotFrameworkAdapter)this.adapter).ContinueConversationAsync(
+                            this.microsoftAppCredentials.MicrosoftAppId,
+                            conversationReference,
+                            async (conversationTurnContext, conversationCancellationToken) =>
+                            {
+                                bool isValidScrum = await this.EndExistingScrumAsync(conversationTurnContext, scrumConfiguration, conversationCancellationToken);
+                                if (!isValidScrum)
                                 {
-                                    bool isValidScrum = await this.EndExistingScrumAndStartScrumAsync(conversationTurnContext, scrumMaster, conversationCancellationToken);
-                                    if (!isValidScrum)
-                                    {
-                                        this.logger.LogInformation("Error while ending the existing scrum.");
-                                        await conversationTurnContext.SendActivityAsync(this.localizer.GetString(this.localizer.GetString("ErrorMessage")));
-                                    }
+                                    this.logger.LogInformation("Error while ending the existing scrum.");
+                                    await conversationTurnContext.SendActivityAsync(this.localizer.GetString(this.localizer.GetString("ErrorMessage")));
+                                }
 
-                                    await this.SendScrumStartCardAsync(conversationTurnContext, scrumMaster, conversationCancellationToken);
-                                },
-                                CancellationToken.None);
-                        }
-                        catch (Exception ex)
-                        {
-                            this.logger.LogError(ex, "Error while performing retry logic to send scrum start card.");
-                            throw;
-                        }
-                    });
-                }
-                catch (Exception ex)
-                {
-                    this.logger.LogError(ex, "Error while sending start scrum to channel from background service.");
-                }
+                                await this.SendScrumStartCardAsync(conversationTurnContext, scrumConfiguration, conversationCancellationToken);
+                            },
+                            CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.logger.LogError(ex, "Error while performing retry logic to send scrum start card.");
+                        throw;
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "Error while sending start scrum to channel from background service.");
             }
         }
 
@@ -192,41 +195,50 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// Method to validate the existing scrum if already running.
         /// </summary>
         /// <param name="turnContext">Context object containing information cached for a single turn of conversation with a user.</param>
-        /// <param name="scrumMaster">Values obtained from ScrumMaster table.</param>
+        /// <param name="scrumConfiguration">Values obtained from ScrumConfiguration table.</param>
         /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
         /// <returns>A task that ends the existing scrum.</returns>
-        private async Task<bool> EndExistingScrumAndStartScrumAsync(ITurnContext turnContext, ScrumMaster scrumMaster, CancellationToken cancellationToken)
+        private async Task<bool> EndExistingScrumAsync(ITurnContext turnContext, ScrumConfiguration scrumConfiguration, CancellationToken cancellationToken)
         {
             // If previous scrum is already running end that and refresh scrum start card.
-            var scrumInfo = await this.scrumStorageProvider.GetScrumByScrumMasterIdAsync(scrumMaster.ScrumMasterId);
-            if (scrumInfo != null)
+            var scrumDetails = await this.scrumStorageProvider.GetScrumsByScrumTeamConfigIdAsync(scrumConfiguration.ScrumTeamConfigId, scrumConfiguration.AadGroupId);
+            if (scrumDetails == null)
             {
-                foreach (var scrum in scrumInfo)
+                return false;
+            }
+
+            foreach (var scrumDetail in scrumDetails)
+            {
+                if (!scrumDetail.IsCompleted)
                 {
-                    if (!scrum.IsCompleted)
+                    scrumDetail.IsCompleted = true;
+                    var savedData = await this.scrumStorageProvider.CreateOrUpdateScrumAsync(scrumDetail);
+                    if (!savedData)
                     {
-                        scrum.IsCompleted = true;
-                        var savedData = await this.scrumStorageProvider.CreateOrUpdateScrumAsync(scrum);
-                        if (!savedData)
-                        {
-                            this.logger.LogInformation($"Error while updating scrim table from storage for scrumMasterId : {scrumMaster.ScrumMasterId}");
-                            return false;
-                        }
-
-                        this.logger.LogInformation($"Getting scrum master details which are active. ScrumMasterId: {scrum.ScrumMasterId}");
-                        var scrumMasterDetails = await this.scrumMasterStorageProvider.GetScrumMasterDetailsByScrumMasterIdAsync(scrum.ScrumMasterId);
-                        if (scrumMasterDetails == null || !scrumMasterDetails.IsActive)
-                        {
-                            return false;
-                        }
-
-                        // End the existing running scrum and refresh start card with end scrum.
-                        var scrumMembers = scrum.MembersActivityIdMap;
-                        var membersActivityIdMap = JsonConvert.DeserializeObject<Dictionary<string, string>>(scrumMembers);
-                        var updatedScrumSummary = await this.scrumHelper.GetScrumSummaryAsync(scrum.ScrumMasterId, scrum.ScrumStartCardResponseId, membersActivityIdMap);
-                        await this.cardHelper.UpdateSummaryCardWithEndScrumAsync(updatedScrumSummary, scrum, scrumMaster, membersActivityIdMap, scrumMasterDetails.TimeZone, turnContext, cancellationToken);
-                        this.logger.LogInformation($"Ended existing running scrum for {scrum.ThreadConversationId}");
+                        this.logger.LogInformation($"Error while updating scrim table from storage for scrumTeamConfigId : {scrumConfiguration.ScrumTeamConfigId}");
+                        return false;
                     }
+
+                    this.logger.LogInformation($"Getting scrum configuration details which are active. ScrumTeamConfigId: {scrumDetail.ScrumTeamConfigId}");
+                    var scrumConfigurationDetails = await this.scrumConfigurationStorageProvider.GetScrumConfigurationDetailByScrumTeamConfigIdAsync(scrumDetail.ScrumTeamConfigId, scrumDetail.AadGroupId);
+                    if (scrumConfigurationDetails == null || !scrumConfigurationDetails.IsActive)
+                    {
+                        return false;
+                    }
+
+                    // End the existing running scrum and refresh start card with end scrum.
+                    var scrumMembers = scrumDetail.MembersActivityIdMap;
+                    var membersActivityIdMap = JsonConvert.DeserializeObject<Dictionary<string, string>>(scrumMembers);
+                    var updatedScrumSummary = await this.scrumHelper.GetScrumSummaryAsync(scrumDetail.ScrumTeamConfigId, scrumConfiguration.AadGroupId, scrumDetail.ScrumStartCardResponseId, membersActivityIdMap);
+
+                    if (updatedScrumSummary == null)
+                    {
+                        this.logger.LogInformation($"No data obtained from storage to update summary card for scrumStartCardActivityId : {scrumDetail.ScrumStartCardResponseId}");
+                        continue;
+                    }
+
+                    await this.cardHelper.UpdateSummaryCardWithEndScrumAsync(updatedScrumSummary, scrumDetail, scrumConfiguration, membersActivityIdMap, scrumConfigurationDetails.TimeZone, turnContext, cancellationToken);
+                    this.logger.LogInformation($"Ended existing running scrum for {scrumDetail.ThreadConversationId}");
                 }
             }
 
@@ -237,53 +249,60 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// Method that sends the start scrum card to the channel.
         /// </summary>
         /// <param name="turnContext">Context object containing information cached for a single turn of conversation with a user.</param>
-        /// <param name="scrumMaster">Scrum master details obtained from storage.</param>
+        /// <param name="scrumConfiguration">scrum configuration details obtained from storage.</param>
         /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
         /// <returns>A task that sends the start scrum card.</returns>
-        private async Task SendScrumStartCardAsync(ITurnContext turnContext, ScrumMaster scrumMaster, CancellationToken cancellationToken)
+        private async Task SendScrumStartCardAsync(ITurnContext turnContext, ScrumConfiguration scrumConfiguration, CancellationToken cancellationToken)
         {
             try
             {
-                string scrumMasterId = scrumMaster.ScrumMasterId;
-                if (scrumMasterId != null)
+                string scrumTeamConfigId = scrumConfiguration.ScrumTeamConfigId;
+                if (scrumTeamConfigId != null)
                 {
-                    this.logger.LogInformation($"Scrum start for ID: {scrumMasterId}");
-                    var scrumSummary = await this.scrumHelper.GetScrumSummaryAsync(scrumMasterId);
+                    this.logger.LogInformation($"Scrum start for ID: {scrumTeamConfigId}");
+                    var scrumSummary = await this.scrumHelper.GetScrumSummaryAsync(scrumTeamConfigId, scrumConfiguration.AadGroupId);
 
                     if (scrumSummary == null)
                     {
-                        this.logger.LogInformation($"Scrum master details are deleted from storage.");
-                        await turnContext.SendActivityAsync(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorScrumDeleted"), scrumMaster.TeamName), cancellationToken: cancellationToken);
+                        this.logger.LogInformation($"scrum configuration details are deleted from storage.");
+                        await turnContext.SendActivityAsync(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorScrumDeleted"), scrumConfiguration.ScrumTeamName), cancellationToken: cancellationToken);
                         return;
                     }
 
-                    // scrumSummary.ScrumStartTime = scrumMaster.StartTime;
                     var scrumStartActivityId = Guid.NewGuid().ToString();
 
                     // Fetching the members list based on the teams id:
-                    turnContext.Activity.Conversation.Id = scrumMaster.TeamId;
-                    var membersActivityIdMap = await this.GetActivityIdOfMembersInScrumAsync(turnContext, scrumMaster, cancellationToken);
+                    turnContext.Activity.Conversation.Id = scrumConfiguration.TeamId;
+                    var scrumMembers = await this.GetValidMembersInScrumAsync(turnContext, scrumConfiguration.UserPrincipalNames, cancellationToken);
+                    if (scrumMembers == null)
+                    {
+                        this.logger.LogInformation($"No scrum members are available to provide the scrum status");
+                        await turnContext.SendActivityAsync(this.localizer.GetString("ErrorNoScrumMembersPresent"), cancellationToken: cancellationToken);
+                        return;
+                    }
+
+                    var membersActivityIdMap = this.GetActivityIdOfMembersInScrum(scrumMembers);
                     string membersList = JsonConvert.SerializeObject(membersActivityIdMap);
 
                     // Mentioning the participants involved in the scrum
-                    var mentionActivity = await this.GetMentionsActivityAsync(turnContext, scrumMaster, cancellationToken);
+                    var mentionActivity = this.GetMentionsActivity(scrumMembers);
 
                     // Check if channel exists. If channel doesn't exist then scrum card will be sent in General channel.
-                    scrumMaster.ChannelId = await this.GetValidChannelIdAsync(turnContext, scrumMaster);
+                    scrumConfiguration.ChannelId = await this.GetValidChannelIdAsync(turnContext, scrumConfiguration);
 
                     // Send the start scrum card
-                    turnContext.Activity.Conversation.Id = scrumMaster.ChannelId;
-                    var attachment = ScrumCard.GetScrumStartCard(scrumSummary, membersActivityIdMap, scrumMasterId, scrumStartActivityId, this.localizer, scrumMaster.TimeZone);
+                    turnContext.Activity.Conversation.Id = scrumConfiguration.ChannelId;
+                    var attachment = ScrumCard.GetScrumStartCard(scrumSummary, membersActivityIdMap, scrumTeamConfigId, scrumStartActivityId, this.localizer, scrumConfiguration.TimeZone);
                     var scrumStartActivity = MessageFactory.Attachment(attachment);
                     var scrumStartActivityResponse = await turnContext.SendActivityAsync(scrumStartActivity, cancellationToken);
 
                     // Update the conversation id to send mentioned participants as reply to scrum start card.
                     turnContext.Activity.Conversation = new ConversationAccount
                     {
-                        Id = $"{scrumMaster.ChannelId};messageid={scrumStartActivityResponse.Id}",
+                        Id = $"{scrumConfiguration.ChannelId};messageid={scrumStartActivityResponse.Id}",
                     };
                     await turnContext.SendActivityAsync(mentionActivity, cancellationToken);
-                    await this.CreateScrumAsync(scrumStartActivityResponse.Id, scrumStartActivityId, membersList, scrumMaster, turnContext, cancellationToken);
+                    await this.CreateScrumAsync(scrumStartActivityResponse.Id, scrumStartActivityId, membersList, scrumConfiguration, turnContext, cancellationToken);
                     this.logger.LogInformation($"Scrum start details saved to table storage for: {turnContext.Activity.Conversation.Id}");
                 }
             }
@@ -295,16 +314,44 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         }
 
         /// <summary>
+        /// Get valid members in scrum and compares whether those members exist in the team.
+        /// </summary>
+        /// <param name="turnContext">Context object containing information cached for a single turn of conversation with a user.</param>
+        /// <param name="userPrincipalNames">User principal names who are currently part of the scrum, separated by comma.</param>
+        /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
+        /// <returns>Returns list of valid members in scrum.</returns>
+        private async Task<IEnumerable<TeamsChannelAccount>> GetValidMembersInScrumAsync(ITurnContext turnContext, string userPrincipalNames, CancellationToken cancellationToken)
+        {
+            var teamsChannelAccounts = new List<TeamsChannelAccount>();
+            string continuationToken = null;
+            do
+            {
+                var currentPage = await TeamsInfo.GetPagedMembersAsync(turnContext, 100, continuationToken, cancellationToken);
+                continuationToken = currentPage.ContinuationToken;
+                teamsChannelAccounts.AddRange(currentPage.Members);
+            }
+            while (continuationToken != null);
+
+            if (!string.IsNullOrEmpty(userPrincipalNames))
+            {
+                var scrumMembers = userPrincipalNames.Split(',').Where(email => !string.IsNullOrEmpty(email));
+                return teamsChannelAccounts.Where(member => scrumMembers.Any(user => user.Equals(member.UserPrincipalName, StringComparison.OrdinalIgnoreCase))).ToList();
+            }
+
+            return null;
+        }
+
+        /// <summary>
         ///  Create a new scrum from the input.
         /// </summary>
         /// <param name="scrumStartCardResponseId">Activity id of scrum summary card.</param>
         /// <param name="scrumCardId">Activity Id of scrum card.</param>
         /// <param name="members">JSON serialized member and activity mapping.</param>
-        /// <param name="scrumMaster">An instance of scrum master details.</param>
+        /// <param name="scrumConfiguration">An instance of scrum configuration details.</param>
         /// <param name="turnContext">Context object containing information cached for a single turn of conversation with a user.</param>
         /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
         /// <returns>void.</returns>
-        private async Task CreateScrumAsync(string scrumStartCardResponseId, string scrumCardId, string members, ScrumMaster scrumMaster, ITurnContext turnContext, CancellationToken cancellationToken)
+        private async Task CreateScrumAsync(string scrumStartCardResponseId, string scrumCardId, string members, ScrumConfiguration scrumConfiguration, ITurnContext turnContext, CancellationToken cancellationToken)
         {
             string conversationId = turnContext.Activity.Conversation.Id;
             try
@@ -316,12 +363,12 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
                     IsCompleted = false,
                     MembersActivityIdMap = members,
                     ScrumStartCardResponseId = scrumStartCardResponseId,
-                    ScrumMasterId = scrumMaster.ScrumMasterId,
+                    ScrumTeamConfigId = scrumConfiguration.ScrumTeamConfigId,
                     ScrumId = conversationId,
-                    ChannelName = scrumMaster.ChannelName,
-                    TeamId = scrumMaster.TeamId,
-                    CreatedOn = DateTime.UtcNow.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'", CultureInfo.InvariantCulture),
-                    AADGroupID = scrumMaster.AADGroupID,
+                    ChannelName = scrumConfiguration.ChannelName,
+                    TeamId = scrumConfiguration.TeamId,
+                    CreatedOn = DateTime.UtcNow.ToString(Constants.Rfc3339DateTimeFormat, CultureInfo.InvariantCulture),
+                    AadGroupId = scrumConfiguration.AadGroupId,
                 };
                 var savedData = await this.scrumStorageProvider.CreateOrUpdateScrumAsync(scrumEntity);
                 if (!savedData)
@@ -340,17 +387,14 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <summary>
         /// Method to show GetMentionsActivity.
         /// </summary>
-        /// <param name="turnContext">Context object containing information cached for a single turn of conversation with a user.</param>
-        /// <param name="scrumMasterDetails">Scrum master details.</param>
-        /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
+        /// <param name="scrumMembers">Scrum members present in the current scrum.</param>
         /// <returns>member ids.</returns>
-        private async Task<Activity> GetMentionsActivityAsync(ITurnContext turnContext, ScrumMaster scrumMasterDetails, CancellationToken cancellationToken)
+        private Activity GetMentionsActivity(IEnumerable<TeamsChannelAccount> scrumMembers)
         {
-            var members = await this.scrumHelper.GetValidMembersInScrumAsync(turnContext, scrumMasterDetails, cancellationToken);
             StringBuilder membersMention = new StringBuilder();
             var entities = new List<Entity>();
             var mentions = new List<Mention>();
-            foreach (var member in members)
+            foreach (var member in scrumMembers)
             {
                 membersMention.Append(" ");
                 var mention = new Mention
@@ -374,23 +418,20 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         }
 
         /// <summary>
-        /// Method to show name card and get members list.
+        /// Method to get unique id for each user present in the scrum.
         /// </summary>
-        /// <param name="turnContext">Context object containing information cached for a single turn of conversation with a user.</param>
-        /// <param name="scrumMaster">Scrum master details.</param>
-        /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
+        /// <param name="scrumMembers">Scrum members present in the current scrum.</param>
         /// <returns>Returns member ids as collection.</returns>
-        private async Task<Dictionary<string, string>> GetActivityIdOfMembersInScrumAsync(ITurnContext turnContext, ScrumMaster scrumMaster, CancellationToken cancellationToken)
+        private Dictionary<string, string> GetActivityIdOfMembersInScrum(IEnumerable<TeamsChannelAccount> scrumMembers)
         {
             var membersActivityIdMap = new Dictionary<string, string>();
 
-            if (scrumMaster == null)
+            if (scrumMembers == null)
             {
                 return null;
             }
 
-            var members = await this.scrumHelper.GetValidMembersInScrumAsync(turnContext, scrumMaster, cancellationToken);
-            foreach (var member in members)
+            foreach (var member in scrumMembers)
             {
                 membersActivityIdMap[member.Id] = Guid.NewGuid().ToString();
             }
@@ -402,31 +443,31 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// Get general channel Id if scrum channel id does not exist.
         /// </summary>
         /// <param name="turnContext">Context object containing information cached for a single turn of conversation with a user.</param>
-        /// <param name="scrumMasterDetails">Scrum master details.</param>
+        /// <param name="scrumConfigurationDetails">scrum configuration details.</param>
         /// <returns>Returns general channel Id if scrum channel id does not exist.</returns>
-        private async Task<string> GetValidChannelIdAsync(ITurnContext turnContext, ScrumMaster scrumMasterDetails)
+        private async Task<string> GetValidChannelIdAsync(ITurnContext turnContext, ScrumConfiguration scrumConfigurationDetails)
         {
-            var teamsChannelInfo = await TeamsInfo.GetTeamChannelsAsync(turnContext, scrumMasterDetails.TeamId, CancellationToken.None);
-            var channelInfo = teamsChannelInfo.Where(channel => channel.Id.Equals(scrumMasterDetails.ChannelId, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+            var teamsChannelInfo = await TeamsInfo.GetTeamChannelsAsync(turnContext, scrumConfigurationDetails.TeamId, CancellationToken.None);
+            var channelInfo = teamsChannelInfo.Where(channel => channel.Id.Equals(scrumConfigurationDetails.ChannelId, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
 
-            if (channelInfo != null)
+            if (channelInfo == null)
             {
-                return scrumMasterDetails.ChannelId;
+                scrumConfigurationDetails.ChannelId = scrumConfigurationDetails.TeamId;
+                scrumConfigurationDetails.ChannelName = Strings.GeneralChannel;
+
+                List<ScrumConfiguration> scrumConfigurations = new List<ScrumConfiguration>();
+                scrumConfigurations.Add(scrumConfigurationDetails);
+
+                var saveResponse = await this.scrumConfigurationStorageProvider.StoreOrUpdateScrumConfigurationEntitiesAsync(scrumConfigurations);
+                if (!saveResponse)
+                {
+                    this.logger.LogError("Error while saving scrum configuration details");
+                }
+
+                return scrumConfigurationDetails.TeamId;
             }
 
-            scrumMasterDetails.ChannelId = scrumMasterDetails.TeamId;
-            scrumMasterDetails.ChannelName = Constants.GeneralChannel;
-
-            List<ScrumMaster> scrumMasters = new List<ScrumMaster>();
-            scrumMasters.Add(scrumMasterDetails);
-
-            var saveResponse = await this.scrumMasterStorageProvider.StoreOrUpdateScrumMasterEntitiesAsync(scrumMasters);
-            if (!saveResponse)
-            {
-                this.logger.LogError("Error while saving scrum master details.");
-            }
-
-            return scrumMasterDetails.TeamId;
+            return scrumConfigurationDetails.ChannelId;
         }
     }
 }

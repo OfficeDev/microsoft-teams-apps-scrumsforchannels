@@ -12,7 +12,7 @@ import { ApplicationInsights, SeverityLevel } from "@microsoft/applicationinsigh
 import { ReactPlugin, withAITracking } from "@microsoft/applicationinsights-react-js";
 import * as microsoftTeams from "@microsoft/teams-js";
 import moment from 'moment';
-import { getResourceStrings, getScrumMasterDetailsbyAADGroupID, getTeamDetails, deleteScrumMasterDetails, saveScrumMasterDetails, handleError, getTimeZoneInfo } from "../api/scrum-status-api";
+import { getResourceStrings, getScrumConfigurationDetailsbyAADGroupID, getTeamDetails, deleteScrumConfigurationDetails, saveScrumConfigurationDetails, handleError, getTimeZoneInfo } from "../api/scrum-status-api";
 import Header from "./header";
 import Footer from './footer'
 import TimeSuggestion from "./time-suggestion";
@@ -42,7 +42,7 @@ interface IScrumState {
     deletedScrums: IScrumProps[]
 }
 
-/** Component for displaying scrum master settings. */
+/** Component for displaying scrum configuration settings. */
 class Settings extends React.Component<IScrumProps, IScrumState>
 {
     customAPIAuthenticationToken?: string | null = null;
@@ -117,7 +117,7 @@ class Settings extends React.Component<IScrumProps, IScrumState>
             this.getTimeZoneDetails();
             this.getTeamDetails(teamId)
                 .then(() => {
-                    this.getScrumMasterDetails(groupID)
+                    this.getScrumConfigurationDetails(groupID)
                 })
             
         });
@@ -162,39 +162,39 @@ class Settings extends React.Component<IScrumProps, IScrumState>
     }
 
     /**
-    *  Get scrum master details from storage.
+    *  Get scrum configuration details from storage.
     * */
-    getScrumMasterDetails = async (groupID: string) => {
-        this.appInsights.trackTrace({ message: `'getScrumMasterDetails' - Request initiated`, severityLevel: SeverityLevel.Information });
+    getScrumConfigurationDetails = async (groupID: string) => {
+        this.appInsights.trackTrace({ message: `'getScrumConfigurationDetails' - Request initiated`, severityLevel: SeverityLevel.Information });
         this.setState({ loading: true });
-        const scrumMasterDetailsResponse = await getScrumMasterDetailsbyAADGroupID(this.customAPIAuthenticationToken!, groupID);
-        if (scrumMasterDetailsResponse) {
-            if (scrumMasterDetailsResponse.status === 200) {
+        const scrumConfigurationDetailsResponse = await getScrumConfigurationDetailsbyAADGroupID(this.customAPIAuthenticationToken!, groupID);
+        if (scrumConfigurationDetailsResponse) {
+            if (scrumConfigurationDetailsResponse.status === 200) {
                 this.setState({
-                    scrums: scrumMasterDetailsResponse.data as IScrumProps[]
+                    scrums: scrumConfigurationDetailsResponse.data as IScrumProps[]
                 });
 
                 // Get names of scrum members from team member details.
-                this.state.scrums.forEach((scrumMasterDetail) => {
-                    if (scrumMasterDetail.UserPrincipalNames) {
-                        scrumMasterDetail.SelectedMembers = [];
-                        scrumMasterDetail.UserPrincipalNames.split(",").forEach((user) => {
+                this.state.scrums.forEach((scrumConfigurationDetail) => {
+                    if (scrumConfigurationDetail.UserPrincipalNames) {
+                        scrumConfigurationDetail.SelectedMembers = [];
+                        scrumConfigurationDetail.UserPrincipalNames.split(",").forEach((user) => {
                             let member: any = this.state.teamMembers.find(member => member.content === user);
                             if (member) {
-                                scrumMasterDetail.SelectedMembers.push(member);
+                                scrumConfigurationDetail.SelectedMembers.push(member);
                             }
                         });
                     }
-                    if (scrumMasterDetail.TimeZone) {
-                        let selectedTimeZone: any = timeZones.find(timeZone => timeZone.timeZoneId === scrumMasterDetail.TimeZone);
-                        scrumMasterDetail.SelectedTimeZone = selectedTimeZone.header;
-                        scrumMasterDetail.StartTime = moment(scrumMasterDetail.StartTime)
+                    if (scrumConfigurationDetail.TimeZone) {
+                        let selectedTimeZone: any = timeZones.find(timeZone => timeZone.timeZoneId === scrumConfigurationDetail.TimeZone);
+                        scrumConfigurationDetail.SelectedTimeZone = selectedTimeZone.header;
+                        scrumConfigurationDetail.StartTime = moment(scrumConfigurationDetail.StartTime)
                             .format(Constants.timePickerFormat);
                     }
                 });
             }
             else {
-                handleError(scrumMasterDetailsResponse, this.customAPIAuthenticationToken);
+                handleError(scrumConfigurationDetailsResponse, this.customAPIAuthenticationToken);
             }
         }
         this.setState({ loading: false });
@@ -223,7 +223,7 @@ class Settings extends React.Component<IScrumProps, IScrumState>
     * */
     private addNewScrum = () => {
         this.setState({
-            scrums: this.state.scrums.concat([{ ScrumMasterId: "", TeamId: "", ChannelId: "", TeamName: "", IsActive: true, StartTime: "", ChannelName: "", TimeZone: "", SelectedTimeZone: "", AADGroupID: "", CreatedOn: "", CreatedBy: "", UserPrincipalNames: "", SelectedMembers: [], Key: "", ServiceUrl: this.serviceUrl }])
+            scrums: this.state.scrums.concat([{ ScrumTeamConfigId: "", TeamId: "", ChannelId: "", ScrumTeamName: "", IsActive: true, StartTime: "", ChannelName: "", TimeZone: "", SelectedTimeZone: "", AADGroupID: "", CreatedOn: "", CreatedBy: "", UserPrincipalNames: "", SelectedMembers: [], ScrumConfigurationId: "", ServiceUrl: this.serviceUrl }])
         });
         return false;
     };
@@ -233,7 +233,7 @@ class Settings extends React.Component<IScrumProps, IScrumState>
     * */
     private teamNameChange = (index: number, event: any) => {
         let Scrumprop = this.state.scrums;
-        Scrumprop[index].TeamName = event.target.value;
+        Scrumprop[index].ScrumTeamName = event.target.value;
         this.setState({
             scrums: Scrumprop,
         });
@@ -326,10 +326,10 @@ class Settings extends React.Component<IScrumProps, IScrumState>
     * */
     private removeScrum = (id: number) => () => {
         let scrums = this.state.scrums;
-        let deletedScrum = (scrums.find((scrum, scrumMasterId) => id === scrumMasterId)) as IScrumProps;
+        let deletedScrum = (scrums.find((scrum, scrumTeamConfigId) => id === scrumTeamConfigId)) as IScrumProps;
         this.state.deletedScrums.push(deletedScrum);
 
-        scrums = scrums.filter((scrum, scrumMasterId) => id !== scrumMasterId);
+        scrums = scrums.filter((scrum, scrumTeamConfigId) => id !== scrumTeamConfigId);
         this.setState({ scrums: scrums });
     };
 
@@ -345,8 +345,8 @@ class Settings extends React.Component<IScrumProps, IScrumState>
 
         if (this.validateScrumDetails())
         {
-            // Store or delete scrum master details in table storage.
-            let response = await this.saveScrumMasterDetails();
+            // Store or delete scrum configuration details in table storage.
+            let response = await this.saveScrumConfigurationDetails();
             if (response) {
                 this.setState({ isSaveScrumSettingsLoading: false });
                 microsoftTeams.getContext((context) => {
@@ -357,7 +357,7 @@ class Settings extends React.Component<IScrumProps, IScrumState>
     };
 
     /**
-    *  Validates user inputs before saving scrum master data in storage.
+    *  Validates user inputs before saving scrum configuration data in storage.
     * */
     private validateScrumDetails() {
         let Scrumprop = this.state.scrums;
@@ -368,12 +368,12 @@ class Settings extends React.Component<IScrumProps, IScrumState>
             let member: any = this.state.teamMembers.find(element => element.aadobjectid === this.userObjectId);
             Scrumprop[i].CreatedBy = member.header;
 
-            if (Scrumprop[i].TeamName) {
-                Scrumprop[i].TeamName = Scrumprop[i].TeamName.trim();
+            if (Scrumprop[i].ScrumTeamName) {
+                Scrumprop[i].ScrumTeamName = Scrumprop[i].ScrumTeamName.trim();
             }
 
             if (!errorMessage) {
-                if (!Scrumprop[i].TeamName) {
+                if (!Scrumprop[i].ScrumTeamName) {
                     errorMessage = this.state.resourceStrings.teamNameValidationText;
                 }
                 else if (!Scrumprop[i].UserPrincipalNames || Scrumprop[i].UserPrincipalNames.split(',').length < 2) {
@@ -389,8 +389,8 @@ class Settings extends React.Component<IScrumProps, IScrumState>
                     errorMessage = this.state.resourceStrings.channelNameValidationText;
                 }
                 else {
-                    let scrums = Scrumprop.filter((scrum, scrumMasterId) => i !== scrumMasterId);
-                    let duplicateScrum = scrums.find(scrum => scrum.TeamName === Scrumprop[i].TeamName && scrum.ChannelName === Scrumprop[i].ChannelName);
+                    let scrums = Scrumprop.filter((scrum, scrumTeamConfigId) => i !== scrumTeamConfigId);
+                    let duplicateScrum = scrums.find(scrum => scrum.ScrumTeamName === Scrumprop[i].ScrumTeamName && scrum.ChannelName === Scrumprop[i].ChannelName);
                     if (duplicateScrum) {
                         errorMessage = this.state.resourceStrings.duplicateScrumValidationText;
                     }
@@ -413,11 +413,11 @@ class Settings extends React.Component<IScrumProps, IScrumState>
     }
 
     /**
-    *  Stores scrum master details in table storage.
+    *  Stores scrum configuration details in table storage.
     * */
-    private saveScrumMasterDetails = async () => {
+    private saveScrumConfigurationDetails = async () => {
         if (this.state.scrums.length > 0) {
-            const saveScrumDetailsResponse = await saveScrumMasterDetails(this.customAPIAuthenticationToken!, this.state.scrums)
+            const saveScrumDetailsResponse = await saveScrumConfigurationDetails(this.customAPIAuthenticationToken!, this.state.scrums)
             if (saveScrumDetailsResponse.status !== 200 && saveScrumDetailsResponse.status !== 204) {
                 this.setState({ isSaveScrumSettingsLoading: false, errorMessage: this.state.resourceStrings.errorMessage });
                 handleError(saveScrumDetailsResponse, this.customAPIAuthenticationToken);
@@ -426,18 +426,18 @@ class Settings extends React.Component<IScrumProps, IScrumState>
         }
         
         this.setState({ isSaveScrumSettingsLoading: true });
-        return await this.deleteScrumMasterDetails();
+        return await this.deleteScrumConfigurationDetails();
     }
 
     /**
-    *  Deletes scrum master details from table storage.
+    *  Deletes scrum configuration details from table storage.
     * */
-    private deleteScrumMasterDetails = async () => {
+    private deleteScrumConfigurationDetails = async () => {
         if (this.state.deletedScrums.length > 0) {
-            this.appInsights.trackTrace({ message: `'deleteScrumMasterDetails' - Request initiated`, severityLevel: SeverityLevel.Information, properties: { UserEmail: this.userEmail } });
+            this.appInsights.trackTrace({ message: `'deleteScrumConfigurationDetails' - Request initiated`, severityLevel: SeverityLevel.Information, properties: { UserEmail: this.userEmail } });
 
-            // Delete scrum master details from table storage.
-            const saveScrumDetailsResponse = await deleteScrumMasterDetails(this.customAPIAuthenticationToken!, this.state.deletedScrums);
+            // Delete scrum configuration details from table storage.
+            const saveScrumDetailsResponse = await deleteScrumConfigurationDetails(this.customAPIAuthenticationToken!, this.state.deletedScrums);
             if (saveScrumDetailsResponse.status === 200 || saveScrumDetailsResponse.status === 204) {
                 return true;
             }
@@ -473,10 +473,10 @@ class Settings extends React.Component<IScrumProps, IScrumState>
                                             maxLength={35}
                                             aria-label={this.state.resourceStrings.teamNameTitle}
                                             placeholder={this.state.resourceStrings.teamNameTitle}
-                                            value={scrum.TeamName}
+                                            value={scrum.ScrumTeamName}
                                             fluid
                                             onChange={event => this.teamNameChange(id, event)}
-                                            title={scrum.TeamName}
+                                            title={scrum.ScrumTeamName}
                                         />
                                     </Flex>
                                 </Table.Cell>

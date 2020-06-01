@@ -58,7 +58,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus
                 .AddTransient<IBot, ScrumStatusActivityHandler>();
 
             // Create the Activity middle-ware that will be added to the middle-ware pipeline in the AdapterWithErrorHandler.
-            services.AddSingleton<ScrumStatusActivityMiddleWare>();
+            services.AddSingleton<ScrumStatusActivityMiddleware>();
             services
                     .AddTransient(serviceProvider => (BotFrameworkAdapter)serviceProvider.GetRequiredService<IBotFrameworkHttpAdapter>());
             services

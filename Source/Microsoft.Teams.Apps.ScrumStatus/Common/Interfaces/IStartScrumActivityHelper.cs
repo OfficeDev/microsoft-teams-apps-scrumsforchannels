@@ -15,8 +15,8 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <summary>
         /// Method to send start scrum card in the channel.
         /// </summary>
-        /// <param name="scrumMaster">Scrum master details obtained from storage.</param>
+        /// <param name="scrumConfiguration">Scrum configuration details obtained from storage.</param>
         /// <returns>A task that sends start scrum card.</returns>
-        Task ScrumStartActivityAsync(ScrumMaster scrumMaster);
+        Task ScrumStartActivityAsync(ScrumConfiguration scrumConfiguration);
     }
 }

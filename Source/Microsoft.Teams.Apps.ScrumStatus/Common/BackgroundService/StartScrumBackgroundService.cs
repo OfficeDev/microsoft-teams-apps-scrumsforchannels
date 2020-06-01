@@ -11,7 +11,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
     using Cronos;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Teams.Apps.ScrumStatus.Helpers;
     using Microsoft.Teams.Apps.ScrumStatus.Models;
 
     /// <summary>
@@ -25,9 +24,9 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         private readonly ILogger<StartScrumBackgroundService> logger;
 
         /// <summary>
-        /// Storage helper for working with scrum master data in Microsoft Azure Table storage.
+        /// Storage helper for working with scrum configuration data in Microsoft Azure Table storage.
         /// </summary>
-        private readonly IScrumMasterStorageProvider scrumMasterStorageProvider;
+        private readonly IScrumConfigurationStorageProvider scrumConfigurationStorageProvider;
 
         /// <summary>
         /// Start scrum activity helper to send card in channel.
@@ -40,7 +39,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         private System.Timers.Timer timer;
 
         /// <summary>
-        /// Timer to schedule scrum master storage call.
+        /// Timer to schedule scrum configuration storage call.
         /// </summary>
         private System.Timers.Timer scrumTimer;
 
@@ -59,15 +58,15 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// BackgroundService class that inherits IHostedService and implements the methods related to sending notification tasks.
         /// </summary>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
-        /// <param name="scrumMasterStorageProvider">Provider to provide scrum master storage details.</param>
+        /// <param name="scrumConfigurationStorageProvider">Provider to provide scrum configuration storage details.</param>
         /// <param name="startScrumActivityHelper">An instance of scrum activity helper.</param>
         public StartScrumBackgroundService(
             ILogger<StartScrumBackgroundService> logger,
-            IScrumMasterStorageProvider scrumMasterStorageProvider,
+            IScrumConfigurationStorageProvider scrumConfigurationStorageProvider,
             IStartScrumActivityHelper startScrumActivityHelper)
         {
             this.logger = logger;
-            this.scrumMasterStorageProvider = scrumMasterStorageProvider;
+            this.scrumConfigurationStorageProvider = scrumConfigurationStorageProvider;
             this.startScrumActivityHelper = startScrumActivityHelper;
         }
 
@@ -128,13 +127,13 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// </summary>
         /// <returns>A task that schedules scrum of next hour.</returns>
         /// <remark>Scrum schedules for next hour. For example at 9 am it schedules all scrum of 10 and 10:30 am.</remark>
-        private Task ScheduleScrumAsync(CronExpression expression, ScrumMaster scrumMaster)
+        private Task ScheduleScrumAsync(CronExpression expression, ScrumConfiguration scrumConfiguration)
         {
             var count = Interlocked.Increment(ref this.executionCount);
             this.logger.LogInformation($"Scheduling scrum task is working. Count: {count}");
 
             // Get the timezone entered by the user to schedule scrum on user specified time.
-            TimeZoneInfo timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(scrumMaster.TimeZone);
+            TimeZoneInfo timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(scrumConfiguration.TimeZone);
             var next = expression.GetNextOccurrence(DateTimeOffset.Now, timeZoneInfo);
             if (next.HasValue)
             {
@@ -144,7 +143,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                 {
                     this.logger.LogInformation($"Timer matched to send notification at timer value : {this.scrumTimer}");
                     this.scrumTimer.Stop();  // reset timer
-                    this.StartScrumAsync(scrumMaster);
+                    this.StartScrumAsync(scrumConfiguration);
                 };
 
                 this.scrumTimer.AutoReset = false;
@@ -157,12 +156,12 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <summary>
         /// Method invokes send notification task which gets channel name and send the notification.
         /// </summary>
-        /// <param name="scrumMaster">values obtained from scrum master table.</param>
+        /// <param name="scrumConfiguration">values obtained from scrum configuration table.</param>
         /// <returns>A task that sends notification in channel for group activity.</returns>
-        private async Task StartScrumAsync(ScrumMaster scrumMaster)
+        private async Task StartScrumAsync(ScrumConfiguration scrumConfiguration)
         {
-            this.logger.LogInformation($"Send the scrum start card for {scrumMaster.ScrumMasterId}");
-            await this.startScrumActivityHelper.ScrumStartActivityAsync(scrumMaster);
+            this.logger.LogInformation($"Send the scrum start card for {scrumConfiguration.ScrumTeamConfigId}");
+            await this.startScrumActivityHelper.ScrumStartActivityAsync(scrumConfiguration);
         }
 
         /// <summary>
@@ -171,7 +170,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         private void ScheduleStorage()
         {
             var count = Interlocked.Increment(ref this.executionCount);
-            this.logger.LogInformation($"Scheduling storage to get scrum master details. Count: {count}");
+            this.logger.LogInformation($"Scheduling storage to get scrum configuration details. Count: {count}");
 
             // Schedule storage call hourly.
             CronExpression storageCronExpression = CronExpression.Parse("0 */1 * * *");
@@ -182,9 +181,9 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                 this.timer = new System.Timers.Timer(delay.TotalMilliseconds);
                 this.timer.Elapsed += (sender, args) =>
                 {
-                    this.logger.LogInformation($"Timer matched to fetch scrum master details at timer value : {this.timer}");
+                    this.logger.LogInformation($"Timer matched to fetch scrum configuration details at timer value : {this.timer}");
                     this.timer.Stop();  // reset timer
-                    this.GetAllScrumDetailAndScheduleAsync();
+                    Task.Run(() => this.GetAllScrumDetailAndScheduleAsync()).Wait();
                     this.ScheduleStorage();    // reschedule next
                 };
 
@@ -200,16 +199,31 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <returns>A task that schedules scrum.</returns>
         private async Task GetAllScrumDetailAndScheduleAsync()
         {
-            var scrumMasterDetails = await this.scrumMasterStorageProvider.GetActiveScrumMasterOfNextHourAsync();
+            var scrumConfigurationDetails = await this.scrumConfigurationStorageProvider.GetActiveScrumConfigurationsOfNextHourAsync();
 
-            if (scrumMasterDetails != null)
+            if (scrumConfigurationDetails != null)
             {
-                foreach (var scrumMaster in scrumMasterDetails)
+                foreach (var scrumConfiguration in scrumConfigurationDetails)
                 {
-                    CronExpression expression = CronExpressionHelper.CreateCronExpression(DateTimeOffset.Parse(scrumMaster.StartTime, CultureInfo.InvariantCulture));
-                    await this.ScheduleScrumAsync(expression, scrumMaster);
+                    CronExpression expression = this.CreateCronExpression(DateTimeOffset.Parse(scrumConfiguration.StartTime, CultureInfo.InvariantCulture));
+                    await this.ScheduleScrumAsync(expression, scrumConfiguration);
                 }
             }
+        }
+
+        /// <summary>
+        /// Creates CRON expression based on given date time.
+        /// </summary>
+        /// <param name="scrumTime">Time to start the scrum.</param>
+        /// <returns>CRON expression</returns>
+        private CronExpression CreateCronExpression(DateTimeOffset scrumTime)
+        {
+            int hourofTheDay = scrumTime.Hour;
+            int mintuesOftheDay = scrumTime.Minute;
+
+            // CRON Expression to send start scrum based on start time and on every weekdays except weekends.
+            CronExpression expression = CronExpression.Parse($"{mintuesOftheDay} {hourofTheDay} * * 1-5");
+            return expression;
         }
     }
 }

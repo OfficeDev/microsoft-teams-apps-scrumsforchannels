@@ -4,11 +4,13 @@
 
 namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
 {
+    using System;
     using System.Collections.Generic;
     using System.Globalization;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Bot.Builder;
+    using Microsoft.Bot.Builder.Teams;
     using Microsoft.Bot.Schema;
     using Microsoft.Extensions.Localization;
     using Microsoft.Extensions.Logging;
@@ -33,39 +35,31 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         private readonly IStringLocalizer<Strings> localizer;
 
         /// <summary>
-        /// Storage helper for working with scrum data in Microsoft Azure Table storage.
-        /// </summary>
-        private readonly IScrumStorageProvider scrumStorageProvider;
-
-        /// <summary>
         /// Instance of class that is used for scrum helper methods.
         /// </summary>
         private readonly ScrumHelper scrumHelper;
 
         /// <summary>
-        /// Storage helper for working with scrum master data in Microsoft Azure Table storage.
+        /// Storage helper for working with scrum configuration data in Microsoft Azure Table storage.
         /// </summary>
-        private readonly IScrumMasterStorageProvider scrumMasterStorageProvider;
+        private readonly IScrumConfigurationStorageProvider scrumConfigurationStorageProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActivityHelper"/> class.
         /// </summary>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
         /// <param name="localizer">The current cultures' string localizer.</param>
-        /// <param name="scrumStorageProvider">Scrum storage provider to maintain data in Microsoft Azure table storage.</param>
-        /// <param name="scrumMasterStorageProvider">Scrum master storage provider to maintain data in Microsoft Azure table storage.</param>
+        /// <param name="scrumConfigurationStorageProvider">Scrum configuration storage provider to maintain data in Microsoft Azure table storage.</param>
         /// <param name="scrumHelper">Instance of class that handles scrum helper methods.</param>
         public ActivityHelper(
             ILogger<ActivityHelper> logger,
             IStringLocalizer<Strings> localizer,
-            IScrumStorageProvider scrumStorageProvider,
-            IScrumMasterStorageProvider scrumMasterStorageProvider,
+            IScrumConfigurationStorageProvider scrumConfigurationStorageProvider,
             ScrumHelper scrumHelper)
         {
             this.logger = logger;
             this.localizer = localizer;
-            this.scrumStorageProvider = scrumStorageProvider;
-            this.scrumMasterStorageProvider = scrumMasterStorageProvider;
+            this.scrumConfigurationStorageProvider = scrumConfigurationStorageProvider;
             this.scrumHelper = scrumHelper;
         }
 
@@ -74,8 +68,8 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// </summary>
         /// <param name="membersId">Members id.</param>
         /// <param name="activityFromId">Activity from id.</param>
-        /// <returns>Returns members activity id string.</returns>
-        public string GetActivityIdToMatch(string membersId, string activityFromId)
+        /// <returns>Returns members activity id string if user exists in scrum members.</returns>
+        public string CheckUserExistsInScrumMembers(string membersId, string activityFromId)
         {
             if (string.IsNullOrEmpty(membersId))
             {
@@ -97,14 +91,15 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <returns>Returns end scrum summary card activity to be updated in team.</returns>
         public async Task<IActivity> GetEndScrumSummaryActivityAsync(Scrum scrum, string conversationId, string scrumMembers, ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
-            var activity = turnContext?.Activity;
-            if (scrum == null || scrum.IsCompleted == true)
+            turnContext = turnContext ?? throw new ArgumentNullException(nameof(turnContext));
+            var activity = turnContext.Activity;
+
+            if (scrum == null)
             {
-                await turnContext.SendActivityAsync(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorScrumDoesNotExist"), activity.From.Name), cancellationToken: cancellationToken);
                 return null;
             }
 
-            var activityId = this.GetActivityIdToMatch(scrum.MembersActivityIdMap, activity.From.Id);
+            var activityId = this.CheckUserExistsInScrumMembers(scrum.MembersActivityIdMap, activity.From.Id);
             if (string.IsNullOrEmpty(activityId))
             {
                 await turnContext.SendActivityAsync(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorUserIsNotPartOfRunningScrumAndTryToEndScrum"), activity.From.Name), cancellationToken: cancellationToken);
@@ -120,24 +115,29 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
             }
 
             var membersActivityIdMap = JsonConvert.DeserializeObject<Dictionary<string, string>>(scrumMembers);
-            scrum.IsCompleted = true;
-            scrum.ThreadConversationId = conversationId;
-            var savedData = await this.scrumStorageProvider.CreateOrUpdateScrumAsync(scrum);
-            if (!savedData)
-            {
-                this.logger.LogError("Error in saving scrum information in storage.");
-                await turnContext.SendActivityAsync(this.localizer.GetString("ErrorSavingScrumData"), cancellationToken: cancellationToken);
-                return null;
-            }
-
             var scrumStartCardResponseId = scrum.ScrumStartCardResponseId;
-            var scrumMaster = await this.scrumMasterStorageProvider.GetScrumMasterDetailsByScrumMasterIdAsync(scrum.ScrumMasterId);
-            var updatedScrumSummary = await this.scrumHelper.GetScrumSummaryAsync(scrum.ScrumMasterId, scrumStartCardResponseId, membersActivityIdMap);
-            var scrumStartCard = ScrumCard.GetScrumStartCard(updatedScrumSummary, membersActivityIdMap, scrum.ScrumMasterId, scrum.ScrumStartActivityId, this.localizer, scrumMaster.TimeZone);
+            string aadGroupId = await this.GetTeamAadGroupIdAsync(turnContext, cancellationToken);
+            var scrumConfiguration = await this.scrumConfigurationStorageProvider.GetScrumConfigurationDetailByScrumTeamConfigIdAsync(scrum.ScrumTeamConfigId, aadGroupId);
+            var updatedScrumSummary = await this.scrumHelper.GetScrumSummaryAsync(scrum.ScrumTeamConfigId, scrumConfiguration.AadGroupId, scrumStartCardResponseId, membersActivityIdMap);
+            var scrumStartCard = ScrumCard.GetScrumStartCard(updatedScrumSummary, membersActivityIdMap, scrum.ScrumTeamConfigId, scrum.ScrumStartActivityId, this.localizer, scrumConfiguration.TimeZone);
             var activitySummary = MessageFactory.Attachment(scrumStartCard);
             activitySummary.Id = scrumStartCardResponseId;
             activitySummary.Conversation = activity.Conversation;
             return activitySummary;
+        }
+
+        /// <summary>
+        /// Get Azure Active Directory group Id of the team in which bot is installed.
+        /// </summary>
+        /// <param name="turnContext">Context object containing information cached for a single turn of conversation with a user.</param>
+        /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
+        /// <returns>Return Active Directory group Id of the team.</returns>
+        public async Task<string> GetTeamAadGroupIdAsync(ITurnContext turnContext, CancellationToken cancellationToken)
+        {
+            turnContext = turnContext ?? throw new ArgumentNullException(nameof(turnContext));
+            var teamInformation = turnContext.Activity.TeamsGetTeamInfo();
+            var teamDetails = await TeamsInfo.GetTeamDetailsAsync(turnContext, teamInformation.Id, cancellationToken).ConfigureAwait(false);
+            return teamDetails.AadGroupId;
         }
     }
 }

@@ -7,9 +7,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
     using System;
     using System.Collections.Generic;
     using System.Data;
-    using System.IO;
     using System.Reflection;
-    using ClosedXML.Excel;
     using Microsoft.ApplicationInsights.DataContracts;
     using Microsoft.Extensions.Logging;
 
@@ -30,32 +28,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         public ExportHelper(ILogger<ExportHelper> logger)
         {
             this.logger = logger;
-        }
-
-        /// <summary>
-        /// Method to create excel workbook and return the output as stream
-        /// </summary>
-        /// <param name="exportDt">Excel to export</param>
-        /// <returns>stream of file generated</returns>
-        public MemoryStream ExportToExcel(DataTable exportDt)
-        {
-            try
-            {
-                using (XLWorkbook workbook = new XLWorkbook())
-                {
-                    workbook.Worksheets.Add(exportDt);
-                    using (MemoryStream stream = new MemoryStream())
-                    {
-                        workbook.SaveAs(stream);
-                        return stream;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, $"Error creating the workbook while exporting the data at ExportToExcel: {ex}", SeverityLevel.Error);
-                throw;
-            }
         }
 
         /// <summary>

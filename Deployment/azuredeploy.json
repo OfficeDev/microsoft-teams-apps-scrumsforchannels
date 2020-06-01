@@ -27,7 +27,7 @@
     "appDisplayName": {
       "type": "string",
       "minLength": 1,
-      "defaultValue": "Scrums for channels",																			
+      "defaultValue": "Scrums for Channels",
       "metadata": {
         "description": "App display name."
       }
@@ -35,7 +35,7 @@
     "appDescription": {
       "type": "string",
       "minLength": 1,
-      "defaultValue": "Scrums for channels helps you get status updates from your team in channel scope",
+      "defaultValue": "Scrums for Channels helps you get status updates from your team in channel scope",
       "metadata": {
         "description": "App description."
       }
@@ -75,6 +75,17 @@
       "defaultValue": "Standard",
       "metadata": {
         "description": "The pricing tier for the hosting plan."
+      }
+    },
+    "AllowExport": {
+      "type": "string",
+      "allowedValues": [
+        "True",
+        "False"
+      ],
+      "defaultValue": "True",
+      "metadata": {
+        "description": "Export the scrum details of last 30 days and requires application level permission i.e. Files.ReadWrite.All and Sites.ReadWrite.All."
       }
     },
     "planSize": {
@@ -181,10 +192,6 @@
           "alwaysOn": true,
           "appsettings": [
             {
-              "name": "SITE_ROLE",
-              "value": "bot"
-            },
-            {
               "name": "Logging:LogLevel:Default",
               "value": "Information"
             },
@@ -199,10 +206,6 @@
             {
               "name": "ApplicationInsights:LogLevel:Microsoft",
               "value": "Information"
-            },
-            {
-              "name": "AllowedHosts",
-              "value": "*"
             },
             {
               "name": "MicrosoftAppId",
@@ -225,8 +228,8 @@
               "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
             },
             {
-              "name": "UppercaseResponse",
-              "value": false
+              "name": "Export:IsExportEnabled",
+              "value": "[parameters('AllowExport')]"
             },
             {
               "name": "i18n:DefaultCulture",

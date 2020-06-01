@@ -32,19 +32,14 @@ namespace Microsoft.Teams.Apps.ScrumStatus
     public sealed class ScrumStatusActivityHandler : TeamsActivityHandler
     {
         /// <summary>
-        ///  Represents the conversation type as channel.
+        /// Represents expiry of token in minutes.
         /// </summary>
-        private const string ChannelConversationType = "channel";
+        private const int JwtExpiryMinutes = 60;
 
         /// <summary>
         /// Represents the Application base Uri.
         /// </summary>
         private readonly string appBaseUri;
-
-        /// <summary>
-        /// A set of key/value application configuration properties for Activity settings.
-        /// </summary>
-        private readonly IOptions<ScrumStatusActivityHandlerOptions> options;
 
         /// <summary>
         /// Instance to send logs to the Application Insights service.
@@ -72,9 +67,9 @@ namespace Microsoft.Teams.Apps.ScrumStatus
         private readonly IScrumStatusStorageProvider scrumStatusStorageProvider;
 
         /// <summary>
-        /// Storage helper for working with scrum master data in Microsoft Azure Table storage.
+        /// Storage helper for working with scrum configuration data in Microsoft Azure Table storage.
         /// </summary>
-        private readonly IScrumMasterStorageProvider scrumMasterStorageProvider;
+        private readonly IScrumConfigurationStorageProvider scrumConfigurationStorageProvider;
 
         /// <summary>
         /// Generating custom JWT token and retrieving access token for user.
@@ -105,7 +100,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus
         /// <param name="options">A set of key/value application configuration properties.</param>
         /// <param name="scrumStorageProvider">Scrum storage provider to maintain data in Microsoft Azure table storage.</param>
         /// <param name="scrumStatusStorageProvider">Scrum status storage provider to maintain data in Microsoft Azure table storage.</param>
-        /// <param name="scrumMasterStorageProvider">Scrum master storage provider to maintain data in Microsoft Azure table storage.</param>
+        /// <param name="scrumConfigurationStorageProvider">Scrum configuration storage provider to maintain data in Microsoft Azure table storage.</param>
         /// <param name="tokenHelper">Generating custom JWT token and retrieving access token for user.</param>
         /// <param name="cardHelper">Instance of class that handles card create/update helper methods.</param>
         /// <param name="activityHelper">Instance of class that handles Bot activity helper methods.</param>
@@ -117,20 +112,20 @@ namespace Microsoft.Teams.Apps.ScrumStatus
             IOptions<ScrumStatusActivityHandlerOptions> options,
             IScrumStorageProvider scrumStorageProvider,
             IScrumStatusStorageProvider scrumStatusStorageProvider,
-            IScrumMasterStorageProvider scrumMasterStorageProvider,
+            IScrumConfigurationStorageProvider scrumConfigurationStorageProvider,
             ITokenHelper tokenHelper,
             CardHelper cardHelper,
             ActivityHelper activityHelper,
             ScrumHelper scrumHelper)
         {
+            options = options ?? throw new ArgumentNullException(nameof(options));
+            this.appBaseUri = options.Value.AppBaseUri;
             this.logger = logger;
             this.localizer = localizer;
             this.telemetryClient = telemetryClient;
-            this.options = options ?? throw new ArgumentNullException(nameof(options));
-            this.appBaseUri = this.options.Value.AppBaseUri;
             this.scrumStorageProvider = scrumStorageProvider;
             this.scrumStatusStorageProvider = scrumStatusStorageProvider;
-            this.scrumMasterStorageProvider = scrumMasterStorageProvider;
+            this.scrumConfigurationStorageProvider = scrumConfigurationStorageProvider;
             this.tokenHelper = tokenHelper;
             this.cardHelper = cardHelper;
             this.scrumHelper = scrumHelper;
@@ -152,29 +147,21 @@ namespace Microsoft.Teams.Apps.ScrumStatus
             ITurnContext<IConversationUpdateActivity> turnContext,
             CancellationToken cancellationToken)
         {
-            try
+            turnContext = turnContext ?? throw new ArgumentNullException(nameof(turnContext));
+            this.RecordEvent(nameof(this.OnMembersAddedAsync), turnContext);
+
+            var activity = turnContext.Activity;
+            this.logger.LogInformation($"conversationType: {activity.Conversation.ConversationType}, membersAdded: {activity.MembersAdded?.Count}");
+
+            if (activity.MembersAdded.Any(member => member.Id == activity.Recipient.Id))
             {
-                turnContext = turnContext ?? throw new ArgumentNullException(nameof(turnContext));
-                this.RecordEvent(nameof(this.OnMembersAddedAsync), turnContext);
-
-                var activity = turnContext.Activity;
-                this.logger.LogInformation($"conversationType: {activity.Conversation.ConversationType}, membersAdded: {activity.MembersAdded?.Count}, membersRemoved: {activity.MembersRemoved?.Count}");
-
-                if (activity.MembersAdded.FirstOrDefault(member => member.Id == activity.Recipient.Id) != null)
-                {
-                    this.logger.LogInformation($"Bot added {activity.Conversation.Id}");
-                    var userWelcomeCardAttachment = WelcomeCard.GetWelcomeCardAttachmentForChannel(this.appBaseUri, this.localizer);
-                    await turnContext.SendActivityAsync(MessageFactory.Attachment(userWelcomeCardAttachment), cancellationToken);
-                }
-                else
-                {
-                    this.logger.LogError("User data could not be found at OnMembersAddedAsync().");
-                }
+                this.logger.LogInformation($"Bot added {activity.Conversation.Id}");
+                var userWelcomeCardAttachment = WelcomeCard.GetWelcomeCardAttachmentForChannel(this.appBaseUri, this.localizer);
+                await turnContext.SendActivityAsync(MessageFactory.Attachment(userWelcomeCardAttachment), cancellationToken);
             }
-            catch (Exception ex)
+            else
             {
-                this.logger.LogError(ex, "Exception occurred while sending the welcome card to channel.", SeverityLevel.Error);
-                throw;
+                this.logger.LogError("No members added in team.");
             }
         }
 
@@ -212,33 +199,34 @@ namespace Microsoft.Teams.Apps.ScrumStatus
 
                 switch (adaptiveActionType.ToUpperInvariant())
                 {
-                    case Constants.ScrumDetailsTaskModuleCommand:
+                    case Constants.ScrumDetailsTaskModuleCommand: // Command to show scrum details page.
                         if (!string.IsNullOrEmpty(scrumStartActivityId))
                         {
-                            return await this.cardHelper.GetScrumDetailsCardResponseAsync(adaptiveSubmitActionData.ScrumMembers, adaptiveSubmitActionData.ScrumMasterId, scrumStartActivityId, turnContext, cancellationToken);
+                            return await this.cardHelper.GetScrumDetailsCardResponseAsync(adaptiveSubmitActionData.ScrumMembers, adaptiveSubmitActionData.ScrumTeamConfigId, scrumStartActivityId, turnContext, cancellationToken);
                         }
 
                         break;
 
-                    case Constants.UpdateStatusTaskModuleCommand:
-                        var scrumInfo = await this.scrumHelper.GetActiveScrumAsync(adaptiveSubmitActionData.ScrumMasterId);
+                    case Constants.UpdateStatusTaskModuleCommand: // Command to show update scrum status page.
+                        string aadGroupId = await this.activityHelper.GetTeamAadGroupIdAsync(turnContext, cancellationToken);
+                        var scrumInfo = await this.scrumHelper.GetActiveScrumAsync(adaptiveSubmitActionData.ScrumTeamConfigId, aadGroupId);
                         if (scrumInfo == null || scrumInfo.IsCompleted == true)
                         {
                             this.logger.LogInformation($"The scrum is not running at this moment: {activity.Conversation.Id}");
                             return this.cardHelper.GetTaskModuleErrorResponse(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorScrumDoesNotExist"), activity.From.Name), this.localizer.GetString("UpdateStatusTitle"));
                         }
 
-                        var activityId = this.activityHelper.GetActivityIdToMatch(scrumInfo.MembersActivityIdMap, activity.From.Id);
+                        var activityId = this.activityHelper.CheckUserExistsInScrumMembers(scrumInfo.MembersActivityIdMap, activity.From.Id);
                         if (string.IsNullOrEmpty(activityId))
                         {
                             this.logger.LogInformation($"Member who is updating the scrum is not the part of scrum for: {activity.Conversation.Id}");
                             return this.cardHelper.GetTaskModuleErrorResponse(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorUserIsNotPartOfRunningScrumAndTryUpdateStatus"), activity.From.Name), this.localizer.GetString("UpdateStatusTitle"));
                         }
 
-                        return this.cardHelper.GetScrumStatusUpdateCardResponse(adaptiveSubmitActionData.ScrumMembers, adaptiveSubmitActionData.ScrumMasterId, scrumStartActivityId, new ScrumStatus());
+                        return this.cardHelper.GetScrumStatusUpdateCardResponse(adaptiveSubmitActionData.ScrumMembers, adaptiveSubmitActionData.ScrumTeamConfigId, scrumStartActivityId, new ScrumStatus());
 
-                    case Constants.SettingsTaskModuleCommand:
-                        string customAPIAuthenticationToken = this.tokenHelper.GenerateAPIAuthToken(applicationBasePath: activity.ServiceUrl, fromId: activity.From.Id, jwtExpiryMinutes: 60);
+                    case Constants.SettingsTaskModuleCommand: // Command to show scrum settings page.
+                        string customAPIAuthenticationToken = this.tokenHelper.GenerateAPIAuthToken(applicationBasePath: activity.ServiceUrl, fromId: activity.From.Id, JwtExpiryMinutes);
                         return this.cardHelper.GetSettingsCardResponse(customAPIAuthenticationToken, this.telemetryClient?.InstrumentationKey, activity.ServiceUrl);
 
                     default:
@@ -291,28 +279,42 @@ namespace Microsoft.Teams.Apps.ScrumStatus
 
                 switch (adaptiveSubmitActionData.AdaptiveActionType.ToUpperInvariant())
                 {
-                    case Constants.UpdateStatusTaskModuleCommand:
+                    case Constants.UpdateStatusTaskModuleCommand: // command to handle update status page submit.
                         string scrumStartActivityId = adaptiveSubmitActionData.ScrumStartActivityId;
                         string scrumMembers = adaptiveSubmitActionData.ScrumMembers;
-                        string scrumMasterId = adaptiveSubmitActionData.ScrumMasterId;
+                        string scrumTeamConfigId = adaptiveSubmitActionData.ScrumTeamConfigId;
                         if (string.IsNullOrWhiteSpace(scrumStatus.YesterdayTaskDescription) || string.IsNullOrWhiteSpace(scrumStatus.TodayTaskDescription))
                         {
-                            return this.cardHelper.GetScrumStatusValidationCardResponse(scrumMembers, scrumMasterId, scrumStartActivityId, scrumStatus);
+                            return this.cardHelper.GetScrumStatusValidationCardResponse(scrumMembers, scrumTeamConfigId, scrumStartActivityId, scrumStatus);
                         }
 
-                        this.logger.LogInformation($"Getting scrum master details which are active. ScrumMasterId: {scrumMasterId}");
-                        var scrumMasterDetails = await this.scrumMasterStorageProvider.GetScrumMasterDetailsByScrumMasterIdAsync(scrumMasterId);
-                        if (scrumMasterDetails == null || !scrumMasterDetails.IsActive)
+                        this.logger.LogInformation($"Getting scrum configuration details which are active. ScrumTeamConfigId: {scrumTeamConfigId}");
+                        string aadGroupId = await this.activityHelper.GetTeamAadGroupIdAsync(turnContext, cancellationToken);
+                        var scrumConfigurationDetail = await this.scrumConfigurationStorageProvider.GetScrumConfigurationDetailByScrumTeamConfigIdAsync(scrumTeamConfigId, aadGroupId);
+                        if (scrumConfigurationDetail == null || !scrumConfigurationDetail.IsActive)
                         {
-                            this.logger.LogInformation($"Scrum master details for the scrum master id: {scrumMasterId} could not be found or scrum is inactive");
-                            return this.cardHelper.GetTaskModuleErrorResponse(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorScrumMasterDetailsNullOrInactive"), activity.From.Name), this.localizer.GetString("UpdateStatusTitle"));
+                            this.logger.LogInformation($"scrum configuration details for the scrum team configuration id: {scrumTeamConfigId} could not be found or scrum is inactive");
+                            return this.cardHelper.GetTaskModuleErrorResponse(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorScrumConfigurationDetailsNullOrInactive"), activity.From.Name), this.localizer.GetString("UpdateStatusTitle"));
                         }
 
-                        var scrum = (await this.scrumStorageProvider.GetScrumByScrumStartActivityIdAsync(scrumStartActivityId)).FirstOrDefault();
-                        await this.scrumHelper.SaveScrumStatusDetailsAsync(turnContext, scrumStatus, adaptiveSubmitActionData, scrum?.ScrumStartCardResponseId);
+                        var scrumDetail = (await this.scrumStorageProvider.GetScrumsByScrumStartActivityIdAsync(scrumStartActivityId, scrumConfigurationDetail.AadGroupId)).FirstOrDefault();
+
+                        if (scrumDetail == null)
+                        {
+                            await turnContext.SendActivityAsync(this.localizer.GetString("ErrorScrumDoesNotExist"), cancellationToken: cancellationToken);
+                            return null;
+                        }
+
+                        await this.scrumHelper.SaveScrumStatusDetailsAsync(turnContext, scrumStatus, adaptiveSubmitActionData, scrumDetail.ScrumStartCardResponseId, aadGroupId);
                         var membersActivityIdMap = JsonConvert.DeserializeObject<Dictionary<string, string>>(scrumMembers);
-                        var updatedScrumSummary = await this.scrumHelper.GetScrumSummaryAsync(scrumMasterId, scrum?.ScrumStartCardResponseId, membersActivityIdMap);
-                        await this.cardHelper.UpdateSummaryCardAsync(updatedScrumSummary, scrum?.ScrumStartCardResponseId, scrumMasterId, scrumStartActivityId, membersActivityIdMap, scrumMasterDetails.TimeZone, turnContext, cancellationToken);
+                        var updatedScrumSummary = await this.scrumHelper.GetScrumSummaryAsync(scrumTeamConfigId, scrumConfigurationDetail.AadGroupId, scrumDetail.ScrumStartCardResponseId, membersActivityIdMap);
+                        if (updatedScrumSummary == null)
+                        {
+                            this.logger.LogInformation($"No data obtained from storage to update summary card for summaryCardActivityId : {scrumDetail.ScrumStartCardResponseId}");
+                            return null;
+                        }
+
+                        await this.cardHelper.UpdateSummaryCardAsync(updatedScrumSummary, scrumDetail.ScrumStartCardResponseId, scrumTeamConfigId, scrumStartActivityId, membersActivityIdMap, scrumConfigurationDetail.TimeZone, turnContext, cancellationToken);
                         return null;
 
                     default:
@@ -340,31 +342,23 @@ namespace Microsoft.Teams.Apps.ScrumStatus
             ITurnContext<IMessageActivity> turnContext,
             CancellationToken cancellationToken)
         {
-            try
+            turnContext = turnContext ?? throw new ArgumentNullException(nameof(turnContext));
+            this.RecordEvent(nameof(this.OnMessageActivityAsync), turnContext);
+
+            var activity = turnContext.Activity;
+
+            switch (activity.Conversation.ConversationType)
             {
-                turnContext = turnContext ?? throw new ArgumentNullException(nameof(turnContext));
-                this.RecordEvent(nameof(this.OnMessageActivityAsync), turnContext);
+                case Constants.ChannelConversationType:
+                    await this.OnMessageActivityInChannelAsync(
+                        activity,
+                        turnContext,
+                        cancellationToken);
+                    break;
 
-                var activity = turnContext.Activity;
-
-                switch (activity.Conversation.ConversationType)
-                {
-                    case ChannelConversationType:
-                        await this.OnMessageActivityInChannelAsync(
-                            activity,
-                            turnContext,
-                            cancellationToken);
-                        break;
-
-                    default:
-                        this.logger.LogInformation($"Received unexpected conversationType {activity.Conversation.ConversationType}", SeverityLevel.Warning);
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                await turnContext.SendActivityAsync(this.localizer.GetString("ErrorMessage"), cancellationToken: cancellationToken);
-                this.logger.LogError(ex, $"Error processing message: {ex.Message}", SeverityLevel.Error);
+                default:
+                    this.logger.LogInformation($"Received unexpected conversationType {activity.Conversation.ConversationType}", SeverityLevel.Warning);
+                    break;
             }
         }
 
@@ -380,59 +374,61 @@ namespace Microsoft.Teams.Apps.ScrumStatus
             ITurnContext<IMessageActivity> turnContext,
             CancellationToken cancellationToken)
         {
-            try
-            {
-                if (message.Type.Equals(ActivityTypes.Message, StringComparison.OrdinalIgnoreCase))
-                {
-                    string actionType = message.Value != null ? JObject.Parse(message.Value.ToString())["AdaptiveActionType"]?.ToString() : null;
-                    string scrumMembers = message.Value != null ? JObject.Parse(message.Value.ToString())["ScrumMembers"]?.ToString() : null;
-                    message.RemoveRecipientMention();
-                    string text = string.IsNullOrEmpty(message.Text) ? actionType : message.Text;
+            string actionType = message.Value != null ? JObject.Parse(message.Value.ToString())["AdaptiveActionType"]?.ToString() : null;
+            string scrumMembers = message.Value != null ? JObject.Parse(message.Value.ToString())["ScrumMembers"]?.ToString() : null;
+            message.RemoveRecipientMention();
+            string text = string.IsNullOrEmpty(message.Text) ? actionType : message.Text;
 
-                    switch (text.ToUpperInvariant().Trim())
+            switch (text.ToUpperInvariant().Trim())
+            {
+                case Constants.EndScrum: // command to handle end scrum.
+                    string conversationId = message.Conversation.Id;
+                    string scrumTeamConfigId = JObject.Parse(message.Value.ToString())["ScrumTeamConfigId"].ToString();
+                    string aadGroupId = await this.activityHelper.GetTeamAadGroupIdAsync(turnContext, cancellationToken);
+                    var scrumInfo = await this.scrumHelper.GetActiveScrumAsync(scrumTeamConfigId, aadGroupId);
+                    if (scrumInfo == null || scrumInfo.IsCompleted == true)
                     {
-                        case Constants.EndScrum:
-                            string conversationId = message.Conversation.Id;
-                            string scrumMasterId = JObject.Parse(message.Value.ToString())["ScrumMasterId"].ToString();
-                            var scrumInfo = await this.scrumHelper.GetActiveScrumAsync(scrumMasterId);
-                            var activitySummary = await this.activityHelper.GetEndScrumSummaryActivityAsync(scrumInfo, conversationId, scrumMembers, turnContext, cancellationToken);
-                            if (activitySummary != null)
-                            {
-                                this.logger.LogInformation($"Scrum completed by: {turnContext.Activity.From.Name} for {conversationId} with ScrumStartCardResponseId: {scrumInfo.ScrumStartCardResponseId}");
-                                await turnContext.UpdateActivityAsync(activitySummary, cancellationToken);
-                                await turnContext.SendActivityAsync(this.localizer.GetString("SuccessMessageAfterEndingScrum"), cancellationToken: cancellationToken);
-                            }
-
-                            break;
-
-                        case Constants.Help:
-                            this.logger.LogInformation("Sending help card");
-                            var helpAttachment = HelpCard.GetHelpCard(this.localizer);
-                            await turnContext.SendActivityAsync(MessageFactory.Attachment(helpAttachment), cancellationToken);
-                            break;
-
-                        case Constants.Settings:
-                            this.logger.LogInformation("Sending settings button card");
-                            var settingsAttachment = SettingsCard.GetSettingsCard(this.localizer);
-                            await turnContext.SendActivityAsync(MessageFactory.Attachment(settingsAttachment), cancellationToken);
-                            break;
-
-                        default:
-                            this.logger.LogInformation("Invalid command text entered in channel. Sending help card");
-                            var helpAttachmentcard = HelpCard.GetHelpCard(this.localizer);
-                            await turnContext.SendActivityAsync(MessageFactory.Attachment(helpAttachmentcard), cancellationToken);
-                            break;
+                        await turnContext.SendActivityAsync(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorScrumDoesNotExist"), turnContext.Activity.From.Name), cancellationToken: cancellationToken);
+                        break;
                     }
-                }
-                else
-                {
-                    await turnContext.SendActivityAsync(this.localizer.GetString("InformationAboutBotInstallationLimitation"), cancellationToken: cancellationToken);
-                }
-            }
-            catch (Exception ex)
-            {
-                await turnContext.SendActivityAsync(this.localizer.GetString("ErrorMessage"), cancellationToken: cancellationToken);
-                this.logger.LogError(ex, $"Error processing message: {ex.Message}", SeverityLevel.Error);
+
+                    scrumInfo.IsCompleted = true;
+                    scrumInfo.ThreadConversationId = conversationId;
+                    var scrumSaveResponse = await this.scrumStorageProvider.CreateOrUpdateScrumAsync(scrumInfo);
+                    if (!scrumSaveResponse)
+                    {
+                        this.logger.LogError("Error in saving scrum information in storage.");
+                        await turnContext.SendActivityAsync(this.localizer.GetString("ErrorSavingScrumData"), cancellationToken: cancellationToken);
+                        break;
+                    }
+
+                    var activitySummary = await this.activityHelper.GetEndScrumSummaryActivityAsync(scrumInfo, conversationId, scrumMembers, turnContext, cancellationToken);
+                    if (activitySummary != null)
+                    {
+                        this.logger.LogInformation($"Scrum completed by: {turnContext.Activity.From.AadObjectId} for {conversationId} with ScrumStartCardResponseId: {scrumInfo.ScrumStartCardResponseId}");
+                        await turnContext.UpdateActivityAsync(activitySummary, cancellationToken);
+                        await turnContext.SendActivityAsync(this.localizer.GetString("SuccessMessageAfterEndingScrum"), cancellationToken: cancellationToken);
+                    }
+
+                    break;
+
+                case Constants.Help: // command to show help card.
+                    this.logger.LogInformation("Sending help card");
+                    var helpAttachment = HelpCard.GetHelpCard(this.localizer);
+                    await turnContext.SendActivityAsync(MessageFactory.Attachment(helpAttachment), cancellationToken);
+                    break;
+
+                case Constants.Settings: // Command to show adaptive card with settings CTA button.
+                    this.logger.LogInformation("Sending settings button card");
+                    var settingsAttachment = SettingsCard.GetSettingsCard(this.localizer);
+                    await turnContext.SendActivityAsync(MessageFactory.Attachment(settingsAttachment), cancellationToken);
+                    break;
+
+                default:
+                    this.logger.LogInformation("Invalid command text entered in channel. Sending help card");
+                    var helpAttachmentcard = HelpCard.GetHelpCard(this.localizer);
+                    await turnContext.SendActivityAsync(MessageFactory.Attachment(helpAttachmentcard), cancellationToken);
+                    break;
             }
         }
 
@@ -447,6 +443,8 @@ namespace Microsoft.Teams.Apps.ScrumStatus
             {
                 { "userId", turnContext.Activity.From.AadObjectId },
                 { "tenantId", turnContext.Activity.Conversation.TenantId },
+                { "teamId", turnContext.Activity.Conversation.Id },
+                { "channelId", turnContext.Activity.ChannelId },
             });
         }
     }

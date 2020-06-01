@@ -31,12 +31,12 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Cards
         /// </summary>
         /// <param name="scrumSummary">Instance containing scrum related details.</param>
         /// <param name="membersActivityIdMap">Members id who are part of the scrum.</param>
-        /// <param name="scrumMasterId">Unique identifier for scrum master details.</param>
+        /// <param name="scrumTeamConfigId">Unique identifier for scrum configuration details.</param>
         /// <param name="scrumStartActivityId">Scrum start card activity id. This will be used to refresh card if needed.</param>
         /// <param name="localizer">The current cultures' string localizer.</param>
         /// <param name="timeZone">Used to convert scrum start time as per specified time zone.</param>
         /// <returns>Scrum status update card attachment.</returns>
-        public static Attachment GetScrumStartCard(ScrumSummary scrumSummary, Dictionary<string, string> membersActivityIdMap, string scrumMasterId, string scrumStartActivityId, IStringLocalizer<Strings> localizer, string timeZone)
+        public static Attachment GetScrumStartCard(ScrumSummary scrumSummary, Dictionary<string, string> membersActivityIdMap, string scrumTeamConfigId, string scrumStartActivityId, IStringLocalizer<Strings> localizer, string timeZone)
         {
             string userSpecifiedDateTime = FormatDateStringToAdaptiveCardDateFormat(scrumSummary?.ScrumStartTime, timeZone);
             string scrumMembers = JsonConvert.SerializeObject(membersActivityIdMap);
@@ -203,7 +203,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Cards
                         Type = Constants.TaskModuleFetchType,
                     },
                     AdaptiveActionType = Constants.ScrumDetailsTaskModuleCommand,
-                    ScrumMasterId = scrumMasterId,
+                    ScrumTeamConfigId = scrumTeamConfigId,
                     ScrumStartActivityId = scrumStartActivityId,
                     ScrumMembers = scrumMembers,
                 },
@@ -223,7 +223,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Cards
                                 Type = Constants.TaskModuleFetchType,
                             },
                             AdaptiveActionType = Constants.UpdateStatusTaskModuleCommand,
-                            ScrumMasterId = scrumMasterId,
+                            ScrumTeamConfigId = scrumTeamConfigId,
                             ScrumStartActivityId = scrumStartActivityId,
                             ScrumMembers = scrumMembers,
                         },
@@ -239,7 +239,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Cards
                                 Type = ActionTypes.MessageBack,
                             },
                             AdaptiveActionType = Constants.EndScrum,
-                            ScrumMasterId = scrumMasterId,
+                            ScrumTeamConfigId = scrumTeamConfigId,
                             ScrumStartActivityId = scrumStartActivityId,
                             ScrumMembers = scrumMembers,
                         },
@@ -267,12 +267,12 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Cards
         /// </summary>
         /// <param name="scrumStatuses">Scrum statuses details filled by members.</param>
         /// <param name="scrumSummary">Scrum related summary.</param>
-        /// <param name="teamsChannels">Team channel information from which team roaster information to fetch.</param>
+        /// <param name="scrumMembers">Scrum members present in the scrum and part of the Team.</param>
         /// <param name="applicationBasePath">Application base URL.</param>
         /// <param name="localizer">The current cultures' string localizer.</param>
         /// <param name="timeZone">Used to convert scrum start time as per specified time zone.</param>
         /// <returns>Returns scrum details card attachment.</returns>
-        public static Attachment GetScrumDetailsCard(IEnumerable<ScrumStatus> scrumStatuses, ScrumSummary scrumSummary, IEnumerable<TeamsChannelAccount> teamsChannels, string applicationBasePath, IStringLocalizer<Strings> localizer, string timeZone)
+        public static Attachment GetScrumDetailsCard(IEnumerable<ScrumStatus> scrumStatuses, ScrumSummary scrumSummary, IEnumerable<TeamsChannelAccount> scrumMembers, string applicationBasePath, IStringLocalizer<Strings> localizer, string timeZone)
         {
             string userSpecifiedDateTime = FormatDateStringToAdaptiveCardDateFormat(scrumSummary?.ScrumStartTime, timeZone);
             AdaptiveCard scrumDetailsCard = new AdaptiveCard(Constants.AdaptiveCardVersion)
@@ -378,7 +378,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Cards
                 },
             };
 
-            List<AdaptiveElement> userScrumStatusList = GetAllUserScrumStatusCard(scrumStatuses, teamsChannels, applicationBasePath, localizer);
+            List<AdaptiveElement> userScrumStatusList = GetAllUserScrumStatusCard(scrumStatuses, scrumMembers, applicationBasePath, localizer);
             scrumDetailsCard.Body.AddRange(userScrumStatusList);
 
             var scrumDetailsCardAttachment = new Attachment()
@@ -394,23 +394,23 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Cards
         /// Get scrum status details card for all members for viewing status details.
         /// </summary>
         /// <param name="scrumStatuses">Scrum statuses filled by all members.</param>
-        /// <param name="teamsChannels">Team channel information from which team roaster information to fetch.</param>
+        /// <param name="scrumMembers">Scrum members present in the scrum and part of the Team.</param>
         /// <param name="applicationBasePath">Application base URL.</param>
         /// <param name="localizer">The current cultures' string localizer.</param>
         /// <returns>Returns scrum details card attachment.</returns>
-        public static List<AdaptiveElement> GetAllUserScrumStatusCard(IEnumerable<ScrumStatus> scrumStatuses, IEnumerable<TeamsChannelAccount> teamsChannels, string applicationBasePath, IStringLocalizer<Strings> localizer)
+        public static List<AdaptiveElement> GetAllUserScrumStatusCard(IEnumerable<ScrumStatus> scrumStatuses, IEnumerable<TeamsChannelAccount> scrumMembers, string applicationBasePath, IStringLocalizer<Strings> localizer)
         {
             int id = 1;
             List<AdaptiveElement> allUserScrumStatusDetails = new List<AdaptiveElement>();
 
-            if (teamsChannels == null)
+            if (scrumMembers == null)
             {
                 return null;
             }
 
-            foreach (TeamsChannelAccount member in teamsChannels)
+            foreach (TeamsChannelAccount member in scrumMembers)
             {
-                var userInfo = scrumStatuses.Where(scrumStatus => scrumStatus.AadObjectId.Equals(member.AadObjectId, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                var userInfo = scrumStatuses.Where(scrumStatus => scrumStatus.UserAadObjectId.Equals(member.AadObjectId, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                 if (userInfo == null)
                 {
                     allUserScrumStatusDetails.AddRange(GetUserScrumStatusCard(new ScrumStatus(), member, applicationBasePath, localizer, id, localizer.GetString("ScrumStatusNotStarted")));
@@ -647,14 +647,14 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Cards
         /// Get scrum status update card when user clicks on update status button.
         /// </summary>
         /// <param name="membersId">Members id to verify the user.</param>
-        /// <param name="scrumMasterId">Scrum master id to show updated status.</param>
+        /// <param name="scrumTeamConfigId">Scrum team configuration id to show updated status.</param>
         /// <param name="scrumStartActivityId">Activity id of scrum start card.</param>
         /// <param name="scrumStatus">Scrum status information.</param>
         /// <param name="localizer">The current cultures' string localizer.</param>
         /// <param name="isYesterdayValidationFailure">Determines whether to show yesterday validation error.</param>
         /// <param name="isTodayValidationFailure">Determines whether to show today validation error.</param>
         /// <returns>Scrum status update card attachment.</returns>
-        public static Attachment GetScrumStatusUpdateCard(string membersId, string scrumMasterId, string scrumStartActivityId, ScrumStatus scrumStatus, IStringLocalizer<Strings> localizer, bool isYesterdayValidationFailure = false, bool isTodayValidationFailure = false)
+        public static Attachment GetScrumStatusUpdateCard(string membersId, string scrumTeamConfigId, string scrumStartActivityId, ScrumStatus scrumStatus, IStringLocalizer<Strings> localizer, bool isYesterdayValidationFailure = false, bool isTodayValidationFailure = false)
         {
             AdaptiveCard scrumStatusUpdateCard = new AdaptiveCard(Constants.AdaptiveCardVersion)
             {
@@ -820,7 +820,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Cards
                                 Type = Constants.TaskModuleSubmitType,
                             },
                             ScrumMembers = membersId,
-                            ScrumMasterId = scrumMasterId,
+                            ScrumTeamConfigId = scrumTeamConfigId,
                             ScrumStartActivityId = scrumStartActivityId,
                             AdaptiveActionType = Constants.UpdateStatusTaskModuleCommand,
                         },

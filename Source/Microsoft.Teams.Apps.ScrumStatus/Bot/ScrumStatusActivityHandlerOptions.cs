@@ -10,11 +10,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus
     public sealed class ScrumStatusActivityHandlerOptions
     {
         /// <summary>
-        /// Gets or sets a value indicating whether the response to a message should be all uppercase.
-        /// </summary>
-        public bool UpperCaseResponse { get; set; }
-
-        /// <summary>
         /// Gets or sets unique id of Tenant.
         /// </summary>
         public string TenantId { get; set; }

@@ -13,34 +13,39 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
     public class Scrum : TableEntity
     {
         /// <summary>
-        /// Gets or sets the conversation ID of the team chat that started the scrum.
+        /// Gets or sets the conversation id of the Teams channel that started the scrum.
         /// </summary>
         [JsonProperty("ThreadConversationId")]
-        public string ThreadConversationId { get; set; }
+        public string ThreadConversationId
+        {
+            get { return this.RowKey; }
+            set { this.RowKey = value; }
+        }
 
         /// <summary>
-        /// Gets or sets the unique id of the start scrum card.
+        /// Gets or sets the unique id(new guid) of the start scrum card.
         /// </summary>
         [JsonProperty("ScrumStartActivityId")]
         public string ScrumStartActivityId { get; set; }
 
         /// <summary>
-        /// Gets or sets the id of the root scrum card.
+        /// Gets or sets adaptive card response id to update the card after submitting scrum status.
         /// </summary>
         [JsonProperty("SummaryCardActivityId")]
         public string ScrumStartCardResponseId { get; set; }
 
         /// <summary>
-        /// Gets or sets the scrum members activity id  which are mapped to start scrum card.
+        /// Gets or sets member activity id(guid) against each user principal name which are mapped to start scrum card.
+        /// Dictionary is serialized into string and will be stored in this field.
         /// </summary>
         [JsonProperty("MembersActivityIdMap")]
         public string MembersActivityIdMap { get; set; }
 
         /// <summary>
-        /// Gets or sets the unique identifier of scrum master details.
+        /// Gets or sets the unique identifier of scrum configuration details.
         /// </summary>
-        [JsonProperty("ScrumMasterId")]
-        public string ScrumMasterId { get; set; }
+        [JsonProperty("ScrumTeamConfigId")]
+        public string ScrumTeamConfigId { get; set; }
 
         /// <summary>
         /// Gets or sets unique id of the scrum.
@@ -55,7 +60,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
         public string TeamId { get; set; }
 
         /// <summary>
-        /// Gets or sets name of the channel in which scrum is configured.
+        /// Gets or sets name of the channel in which scrum is configured, in case channel is deleted, it's default value will be updated to "General".
         /// </summary>
         [JsonProperty("ChannelName")]
         public string ChannelName { get; set; }
@@ -67,7 +72,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
         public bool IsCompleted { get; set; }
 
         /// <summary>
-        /// Gets or sets date on which scrum is created.
+        /// Gets or sets date on which scrum is created in Rfc3339DateTimeFormat.
         /// </summary>
         [JsonProperty("CreatedOn")]
         public string CreatedOn { get; set; }
@@ -76,6 +81,10 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
         /// Gets or sets Azure Active Directory group Id in which bot is installed.
         /// </summary>
         [JsonProperty("AadGroupId")]
-        public string AADGroupID { get; set; }
+        public string AadGroupId
+        {
+            get { return this.PartitionKey; }
+            set { this.PartitionKey = value; }
+        }
     }
 }

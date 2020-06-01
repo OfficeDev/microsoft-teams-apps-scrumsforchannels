@@ -1,38 +1,51 @@
-﻿// <copyright file="ScrumMaster.cs" company="Microsoft">
+﻿// <copyright file="ScrumConfiguration.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
 namespace Microsoft.Teams.Apps.ScrumStatus.Models
 {
-    // using System;
     using Microsoft.WindowsAzure.Storage.Table;
     using Newtonsoft.Json;
 
     /// <summary>
-    /// Class containing scrum master details such as member, team and channel details.
+    /// Class containing scrum configuration details such as member, team and channel details.
     /// </summary>
-    public class ScrumMaster : TableEntity
+    public class ScrumConfiguration : TableEntity
     {
         /// <summary>
         /// Gets or sets Unique Id of the row.
         /// </summary>
-        [JsonProperty("Key")]
-        public string Key { get; set; }
+        [JsonProperty("ScrumConfigurationId")]
+        public string ScrumConfigurationId
+        {
+            get { return this.RowKey; }
+            set { this.RowKey = value; }
+        }
 
         /// <summary>
-        /// Gets or sets scrum master Id to uniquely identify each scrum configuration.
+        /// Gets or sets Azure Active Directory group id (Teams) where bot is installed.
         /// </summary>
-        [JsonProperty("ScrumMasterId")]
-        public string ScrumMasterId { get; set; }
+        [JsonProperty("AadGroupId")]
+        public string AadGroupId
+        {
+            get { return this.PartitionKey; }
+            set { this.PartitionKey = value; }
+        }
 
         /// <summary>
-        /// Gets or sets channel id in which scrum is configured.
+        /// Gets or sets scrum team configuration id to identify each scrum team configuration details like team name, channel id in which scrum is configured.
+        /// </summary>
+        [JsonProperty("ScrumTeamConfigId")]
+        public string ScrumTeamConfigId { get; set; }
+
+        /// <summary>
+        /// Gets or sets channel id in which scrum is configured, in case channel is deleted, setting it's value to "General channel id".
         /// </summary>
         [JsonProperty("ChannelId")]
         public string ChannelId { get; set; }
 
         /// <summary>
-        /// Gets or sets name of the channel in which scrum is configured.
+        /// Gets or sets name of the channel in which scrum is configured, in case channel is deleted, setting it's value to "General".
         /// </summary>
         [JsonProperty("ChannelName")]
         public string ChannelName { get; set; }
@@ -44,13 +57,13 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
         public string TeamId { get; set; }
 
         /// <summary>
-        /// Gets or sets start time of the scrum at which scrum will get started daily.
+        /// Gets or sets start time of the scrum at which scrum will get started daily in round-trip format.
         /// </summary>
         [JsonProperty("StartTime")]
         public string StartTime { get; set; }
 
         /// <summary>
-        /// Gets or sets UTC hour of user specified start time.
+        /// Gets or sets UTC hour of user specified start time in "HH" format.
         /// </summary>
         [JsonProperty("StartTimeUTCHour")]
         public int StartTimeUTCHour { get; set; }
@@ -68,13 +81,13 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
         public bool IsActive { get; set; }
 
         /// <summary>
-        /// Gets or sets user principle names of members of scrum.
+        /// Gets or sets user principal names of members of scrum, separated by comma(,).
         /// </summary>
         [JsonProperty("UserPrincipalNames")]
         public string UserPrincipalNames { get; set; }
 
         /// <summary>
-        /// Gets or sets date on which scrum is created.
+        /// Gets or sets date on which scrum is created in Rfc3339DateTimeFormat.
         /// </summary>
         [JsonProperty("CreatedOn")]
         public string CreatedOn { get; set; }
@@ -86,16 +99,10 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
         public string CreatedBy { get; set; }
 
         /// <summary>
-        /// Gets or sets scrum team name.
+        /// Gets or sets scrum team name with which scrum will be running daily.
         /// </summary>
-        [JsonProperty("TeamName")]
-        public string TeamName { get; set; }
-
-        /// <summary>
-        /// Gets or sets Azure Active Directory group Id in which bot is installed.
-        /// </summary>
-        [JsonProperty("AadGroupId")]
-        public string AADGroupID { get; set; }
+        [JsonProperty("ScrumTeamName")]
+        public string ScrumTeamName { get; set; }
 
         /// <summary>
         /// Gets or sets activity service URL.

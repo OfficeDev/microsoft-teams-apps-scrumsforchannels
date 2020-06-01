@@ -25,8 +25,9 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// Get scrum status by summary card id from Microsoft Azure Table storage.
         /// </summary>
         /// <param name="summaryCardId">Scrum summary response card Id.</param>
+        /// <param name="aadGroupId">Azure Active Directory group Id.</param>
         /// <returns>Returns collection of scrum status details.</returns>
-        Task<IEnumerable<ScrumStatus>> GetScrumStatusBySummaryCardIdAsync(string summaryCardId);
+        Task<IEnumerable<ScrumStatus>> GetScrumStatusBySummaryCardIdAsync(string summaryCardId, string aadGroupId);
 
         /// <summary>
         /// Delete scrum status entity from Microsoft Azure Table storage.

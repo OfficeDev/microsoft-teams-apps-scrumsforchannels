@@ -8,7 +8,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
     using Newtonsoft.Json;
 
     /// <summary>
-    /// Adaptive Card Action class to post question data.
+    /// Adaptive submit card action data to post scrum and adaptive card related data.
     /// </summary>
     public class AdaptiveSubmitActionData
     {
@@ -37,10 +37,10 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Models
         public string AdaptiveActionType { get; set; }
 
         /// <summary>
-        /// Gets or sets Scrum master id obtained from storage while initiating the scrum.
+        /// Gets or sets scrum team configuration id obtained from storage while initiating the scrum.
         /// </summary>
-        [JsonProperty("ScrumMasterId")]
-        public string ScrumMasterId { get; set; }
+        [JsonProperty("ScrumTeamConfigId")]
+        public string ScrumTeamConfigId { get; set; }
 
         /// <summary>
         /// Gets or sets scrum start card activity id.
