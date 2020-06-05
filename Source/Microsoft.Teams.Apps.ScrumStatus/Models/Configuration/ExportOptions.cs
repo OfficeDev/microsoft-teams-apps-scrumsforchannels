@@ -10,8 +10,9 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.Models
     public class ExportOptions
     {
         /// <summary>
-        /// Gets or sets whether you want to export the scrum details. Value is either true  or false.
+        /// Gets or sets a value indicating whether gets or sets whether you want to export the scrum details.
+        /// Set to true if export is enable.
         /// </summary>
-        public string IsExportEnabled { get; set; }
+        public bool IsExportEnabled { get; set; }
     }
 }

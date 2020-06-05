@@ -39,7 +39,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// Get scrum configuration details which need to be scheduled in next 1 hour by start scrum background service.
         /// </summary>
         /// <returns>Returns collection of scrum configuration details.</returns>
-        Task<IEnumerable<ScrumConfiguration>> GetActiveScrumConfigurationsOfNextHourAsync();
+        Task<IEnumerable<ScrumConfiguration>> GetActiveScrumConfigurationsOfCurrentHourAsync();
 
         /// <summary>
         /// Delete an entity from Microsoft Azure Table storage.

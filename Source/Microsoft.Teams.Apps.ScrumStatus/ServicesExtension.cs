@@ -18,6 +18,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.IdentityModel.Tokens;
     using Microsoft.Teams.Apps.ScrumStatus.Common;
+    using Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService;
     using Microsoft.Teams.Apps.ScrumStatus.Common.Models;
     using Microsoft.Teams.Apps.ScrumStatus.Helpers;
     using Microsoft.Teams.Apps.ScrumStatus.Models.Configuration;
@@ -49,7 +50,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus
             });
             services.Configure<ExportOptions>(options =>
             {
-                options.IsExportEnabled = configuration.GetValue<string>("Export:IsExportEnabled");
+                options.IsExportEnabled = configuration.GetValue<bool>("Export:IsExportEnabled");
             });
             services.Configure<MicrosoftAppOptions>(options =>
             {
@@ -72,9 +73,9 @@ namespace Microsoft.Teams.Apps.ScrumStatus
             services
                 .AddTransient<IScrumStorageProvider, ScrumStorageProvider>();
             services
-                .AddHostedService<StartScrumBackgroundService>();
+               .AddHostedService<ArchivalBackgroundService>();
             services
-                .AddHostedService<ArchivalBackgroundService>();
+                .AddHostedService<ScrumNotificationBackgroundService>();
         }
 
         /// <summary>

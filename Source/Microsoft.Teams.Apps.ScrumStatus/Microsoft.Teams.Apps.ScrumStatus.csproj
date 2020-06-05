@@ -10,6 +10,9 @@
     <TypeScriptBuildMode>true</TypeScriptBuildMode>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Common\BackgroundService\StartScrumBackgroundService.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="..\..\Build\stylecop.json" Link="stylecop.json" />
   </ItemGroup>
   <ItemGroup>

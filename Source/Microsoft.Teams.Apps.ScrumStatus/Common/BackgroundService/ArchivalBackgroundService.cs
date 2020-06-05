@@ -1,7 +1,7 @@
 ﻿// <copyright file="ArchivalBackgroundService.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
-namespace Microsoft.Teams.Apps.ScrumStatus.Common
+namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
 {
     using System;
     using System.Collections.Generic;
@@ -10,9 +10,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Cronos;
     using Microsoft.ApplicationInsights.DataContracts;
-    using Microsoft.Bot.Connector.Authentication;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -23,7 +21,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
     /// <summary>
     /// BackgroundService class that inherits IHostedService and implements the methods related to background tasks for archival of scrum data.
     /// </summary>
-    public class ArchivalBackgroundService : IHostedService, IDisposable
+    public sealed class ArchivalBackgroundService : BackgroundService
     {
         /// <summary>
         /// Storage helper for working with scrum data in Microsoft Azure Table storage.
@@ -51,11 +49,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         private readonly ILogger<ArchivalBackgroundService> logger;
 
         /// <summary>
-        /// Microsoft app credentials.
-        /// </summary>
-        private readonly MicrosoftAppCredentials microsoftAppCredentials;
-
-        /// <summary>
         /// A set of key/value application configuration properties for Activity settings.
         /// </summary>
         private readonly IOptions<ScrumStatusActivityHandlerOptions> options;
@@ -64,11 +57,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// Gets configuration setting whether to export scrum details.
         /// </summary>
         private readonly IOptionsMonitor<ExportOptions> exportOption;
-
-        /// <summary>
-        /// Flag to check whether export is enabled by the user.
-        /// </summary>
-        private readonly string isExportEnabled = "True";
 
         /// <summary>
         /// Name of excel sheet which is exported.
@@ -81,19 +69,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         private DataTable scrumStatusExportDataTable;
 
         /// <summary>
-        /// Execution count.
-        /// </summary>
-        private int executionCount = 0;
-
-        /// <summary>
-        /// Timer.
-        /// </summary>
-        private System.Timers.Timer archivalJobTimer;
-
-        // Flag: Has Dispose already been called?
-        private bool disposed = false;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ArchivalBackgroundService"/> class.
         /// BackgroundService class that inherits IHostedService and implements the methods related to sending notification tasks.
         /// </summary>
@@ -102,7 +77,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// /// <param name="graphUtility">Instance of graph utility helper.</param>
         /// <param name="exportHelper">Instance for creating data table and workbook.</param>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
-        /// <param name="microsoftAppCredentials">MicrosoftAppCredentials of bot.</param>
         /// <param name="options">A set of key/value application configuration properties.</param>
         /// <param name="exportOption">Configuration value to check whether to export scrum details.</param>
         public ArchivalBackgroundService(
@@ -111,7 +85,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
           IGraphUtilityHelper graphUtility,
           ExportHelper exportHelper,
           ILogger<ArchivalBackgroundService> logger,
-          MicrosoftAppCredentials microsoftAppCredentials,
           IOptions<ScrumStatusActivityHandlerOptions> options,
           IOptionsMonitor<ExportOptions> exportOption)
         {
@@ -120,63 +93,39 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
             this.graphUtility = graphUtility;
             this.exportHelper = exportHelper;
             this.logger = logger;
-            this.microsoftAppCredentials = microsoftAppCredentials;
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.exportOption = exportOption;
         }
 
         /// <summary>
-        /// Method to start the background task when application starts.
+        ///  This method is called when the Microsoft.Extensions.Hosting.IHostedService starts.
+        ///  The implementation should return a task that represents the lifetime of the long
+        ///  running operation(s) being performed.
         /// </summary>
-        /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
-        /// <returns>A task instance.</returns>
-        public Task StartAsync(CancellationToken cancellationToken)
+        /// <param name="stoppingToken">Triggered when Microsoft.Extensions.Hosting.IHostedService.StopAsync(System.Threading.CancellationToken) is called.</param>
+        /// <returns>A System.Threading.Tasks.Task that represents the long running operations.</returns>
+        protected async override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (this.exportOption.CurrentValue.IsExportEnabled.Equals(this.isExportEnabled, StringComparison.OrdinalIgnoreCase))
+            this.logger.LogInformation($"Export to SharePoint archival settings found as {this.exportOption.CurrentValue.IsExportEnabled}");
+
+            while (this.exportOption.CurrentValue.IsExportEnabled
+                && !stoppingToken.IsCancellationRequested)
             {
-                this.ScheduleArchivalJob();
+                this.logger.LogInformation("Archival background job execution has started...");
+
+                // get the last day of current month.
+                var lastDayOfMonth = this.GetLastDayOfMonth();
+
+                // check if the current day is the last day of the month.
+                if (DateTimeOffset.UtcNow.Day == lastDayOfMonth)
+                {
+                    await this.GetArchivalDataAsync();
+                }
+
+                await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
             }
 
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Triggered when the host is performing a graceful shutdown.
-        /// </summary>
-        /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
-        /// <returns>A task instance.</returns>
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// This code added to correctly implement the disposable pattern.
-        /// </summary>
-        public void Dispose()
-        {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// Protected implementation of Dispose pattern.
-        /// </summary>
-        /// <param name="disposing">True if already disposed else false.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-                this.archivalJobTimer.Dispose();
-                this.scrumStatusExportDataTable.Dispose();
-            }
-
-            this.disposed = true;
+            this.logger.LogError("Archival job execution has stopped.");
         }
 
         /// <summary>
@@ -190,34 +139,37 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                 List<ScrumExport> scrumToExport = new List<ScrumExport>();
                 string filePath = string.Empty;
                 string fileName = string.Empty;
-                var scrum = this.scrumStorageProvider.GetScrumDetailsByTimestampAsync().Result;
-                if (scrum == null)
+                var scrums = this.scrumStorageProvider.GetScrumDetailsByTimestampAsync().Result;
+                if (scrums == null || !scrums.Any())
                 {
                     this.logger.LogInformation("Scrum obtained is null in archival job");
                     return;
                 }
 
-                foreach (var scrumData in scrum)
+                foreach (var scrum in scrums)
                 {
-                    if (string.IsNullOrEmpty(scrumData.AadGroupId))
+                    if (string.IsNullOrEmpty(scrum.AadGroupId))
                     {
                         this.logger.LogInformation("AAD group id is null in scrum data in archival job");
                         continue;
                     }
 
-                    var scrumStatus = await this.scrumStatusStorageProvider.GetScrumStatusBySummaryCardIdAsync(scrumData.ScrumStartCardResponseId, scrumData.AadGroupId);
-                    var driveDetails = await this.graphUtility.GetDriveDetailsAsync(scrumData.AadGroupId);
+                    var scrumStatus = await this.scrumStatusStorageProvider
+                        .GetScrumStatusBySummaryCardIdAsync(scrum.ScrumStartCardResponseId, scrum.AadGroupId);
+                    var driveDetails = await this.graphUtility.GetDriveDetailsAsync(scrum.AadGroupId);
+
                     scrumToExport = scrumStatus.Select(
-                                                        scrumExport => new ScrumExport
-                                                        {
-                                                            DateOfScrum = scrumExport.CreatedOn,
-                                                            MemberName = scrumExport.Username,
-                                                            WorkedUponYesterday = scrumExport.YesterdayTaskDescription,
-                                                            Blockers = scrumExport.BlockerDescription,
-                                                            PlanForToday = scrumExport.TodayTaskDescription,
-                                                        }).ToList();
+                        scrumExport => new ScrumExport
+                        {
+                            DateOfScrum = scrumExport.CreatedOn,
+                            MemberName = scrumExport.Username,
+                            WorkedUponYesterday = scrumExport.YesterdayTaskDescription,
+                            Blockers = scrumExport.BlockerDescription,
+                            PlanForToday = scrumExport.TodayTaskDescription,
+                        }).ToList();
+
                     fileName = this.GetCurrentTimestamp() + ".xlsx";
-                    filePath = $"{scrumData.ChannelName}/ScrumReports/{scrumData.ScrumTeamConfigId.Split("_")[0]}/{fileName}";
+                    filePath = $"{scrum.ChannelName}/ScrumReports/{scrum.ScrumTeamConfigId.Split("_")[0]}/{fileName}";
                     using (this.scrumStatusExportDataTable = this.exportHelper.ConvertToDataTable(scrumToExport, this.exportedSheetName))
                     {
                         var uploadContext = await this.graphUtility.PutAsync(this.scrumStatusExportDataTable, filePath, driveDetails.Id);
@@ -229,7 +181,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
                                 await this.DeleteScrumStatusAsync(scrumStatus);
                             }
 
-                            await this.DeleteScrumAsync(scrumData);
+                            await this.DeleteScrumAsync(scrum);
                         }
                         else
                         {
@@ -241,7 +193,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
             catch (Exception ex)
             {
                 this.logger.LogError(ex, $"An error occurred while exporting data in archival job in GetArchivalDataAsync", SeverityLevel.Error);
-                throw;
             }
         }
 
@@ -252,41 +203,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         private string GetCurrentTimestamp()
         {
             return DateTimeOffset.Now.ToString("yyyy-MM-dd_hh-mm-ss", CultureInfo.InvariantCulture);
-        }
-
-        /// <summary>
-        /// Set the timer and enqueue start scrum task if timer matched as per CRON expression.
-        /// </summary>
-        private void ScheduleArchivalJob()
-        {
-            var count = Interlocked.Increment(ref this.executionCount);
-            this.logger.LogInformation($"Start scrum Hosted Service is working. Count: {count}");
-
-            // Schedule storage call monthly.
-            var lastDayOfMonth = this.GetLastDayOfMonth();
-            CronExpression expression = CronExpression.Parse($"0 0 15,{lastDayOfMonth} * *");
-            var next = expression.GetNextOccurrence(DateTimeOffset.Now, TimeZoneInfo.Local);
-            if (next.HasValue)
-            {
-                var delay = next.Value - DateTimeOffset.Now;
-                this.archivalJobTimer = new System.Timers.Timer(delay.TotalMilliseconds);
-                this.archivalJobTimer.Elapsed += (sender, args) =>
-                {
-                    this.archivalJobTimer.Stop();  // reset timer
-
-                    // Export excel and delete rows if it is last day of the month.
-                    if (lastDayOfMonth.Equals(next.Value.Day))
-                    {
-                        this.logger.LogInformation($"Last day of the month {lastDayOfMonth} and exporting the data.");
-                        Task.Run(() => this.GetArchivalDataAsync()).Wait();
-                    }
-
-                    this.ScheduleArchivalJob();    // reschedule next
-                };
-
-                this.archivalJobTimer.AutoReset = false;
-                this.archivalJobTimer.Start();
-            }
         }
 
         /// <summary>
@@ -348,7 +264,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <returns>Last day of the month.</returns>
         private int GetLastDayOfMonth()
         {
-            var date = DateTime.Now;
+            var date = DateTime.UtcNow;
             var daysInMonth = DateTime.DaysInMonth(date.Year, date.Month);
             var lastDay = new DateTime(date.Year, date.Month, daysInMonth);
             this.logger.LogInformation($"Last day of the month obtained is : {lastDay}");

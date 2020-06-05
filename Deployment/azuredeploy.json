@@ -78,12 +78,12 @@
       }
     },
     "AllowExport": {
-      "type": "string",
+      "type": "bool",
       "allowedValues": [
-        "True",
-        "False"
+        "true",
+        "false"
       ],
-      "defaultValue": "True",
+      "defaultValue": "bool('false')",
       "metadata": {
         "description": "Export the scrum details of last 30 days and requires application level permission i.e. Files.ReadWrite.All and Sites.ReadWrite.All."
       }
