@@ -85,7 +85,7 @@
       ],
       "defaultValue": false,
       "metadata": {
-        "description": "Export the scrum details of last 30 days and requires application level permission i.e. Files.ReadWrite.All and Sites.ReadWrite.All."
+        "description": "Export the scrum details in excel sheet of last 30 days in scrum channels. This requires application level permission i.e. Files.ReadWrite.All and Sites.ReadWrite.All."
       }
     },
     "planSize": {
