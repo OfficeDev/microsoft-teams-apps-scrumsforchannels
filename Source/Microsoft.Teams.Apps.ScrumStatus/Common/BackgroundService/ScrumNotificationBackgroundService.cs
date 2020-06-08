@@ -64,10 +64,10 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
                     this.logger.LogInformation("Scrum notification service has started...");
                     await this.ProcessScheduledScrumNotificationAsync();
 
-                    // Schedule next run in 5 minutes
-                    CronExpression storageCronExpression = CronExpression.Parse("*/5 * * * *");
+                    // Schedule next run in 30 minutes
+                    CronExpression storageCronExpression = CronExpression.Parse("*/30 * * * *");
                     var next = storageCronExpression.GetNextOccurrence(DateTimeOffset.Now, TimeZoneInfo.Local);
-                    var delay = next.HasValue ? next.Value - DateTimeOffset.Now : TimeSpan.FromMinutes(5);
+                    var delay = next.HasValue ? next.Value - DateTimeOffset.Now : TimeSpan.FromMinutes(30);
                     await Task.Delay(delay, stoppingToken);
                 }
 #pragma warning disable CA1031 // Catching general exceptions that might arise during execution to avoid blocking next run.
@@ -98,10 +98,10 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
                     TimeZoneInfo userSpecifiedTimeZone = TimeZoneInfo.FindSystemTimeZoneById(scrumConfiguration.TimeZone);
                     DateTime scheduledStartTime = TimeZoneInfo.ConvertTimeToUtc(DateTime.Parse(scrumConfiguration.StartTime, CultureInfo.InvariantCulture), userSpecifiedTimeZone);
 
-                    // if the start time is scheduled for next 5 minutes, then start processing else skip.
+                    // if the start time is scheduled for next 30 minutes, then start processing else skip.
                     // if the start window is missed, scrum will be skipped for the day and will be scheduled on next day.
                     if (schedulerTime.TimeOfDay <= scheduledStartTime.TimeOfDay
-                        && schedulerTime.AddMinutes(5).TimeOfDay > scheduledStartTime.TimeOfDay)
+                        && schedulerTime.AddMinutes(30).TimeOfDay > scheduledStartTime.TimeOfDay)
                     {
                         this.logger.LogInformation($"scrum for team {scrumConfiguration.ScrumTeamName} is ready to start {scheduledStartTime.TimeOfDay}");
                         await this.startScrumActivityHelper.ScrumStartActivityAsync(scrumConfiguration);
