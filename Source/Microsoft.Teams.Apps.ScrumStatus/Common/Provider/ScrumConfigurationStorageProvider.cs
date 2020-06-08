@@ -111,10 +111,10 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         {
             try
             {
-                int nextHour = DateTime.UtcNow.Hour;
+                int currentUtcHour = DateTime.UtcNow.Hour;
                 await this.EnsureInitializedAsync();
                 string isActiveFilter = TableQuery.GenerateFilterConditionForBool(nameof(ScrumConfiguration.IsActive), QueryComparisons.Equal, true);
-                string timeFilter = TableQuery.GenerateFilterConditionForInt(nameof(ScrumConfiguration.StartTimeUTCHour), QueryComparisons.Equal, nextHour);
+                string timeFilter = TableQuery.GenerateFilterConditionForInt(nameof(ScrumConfiguration.StartTimeUTCHour), QueryComparisons.Equal, currentUtcHour);
                 var combinedFilter = TableQuery.CombineFilters(isActiveFilter, TableOperators.And, timeFilter);
 
                 TableQuery<ScrumConfiguration> query = new TableQuery<ScrumConfiguration>().Where(combinedFilter);

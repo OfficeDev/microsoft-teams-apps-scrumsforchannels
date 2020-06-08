@@ -128,10 +128,24 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
 
                 this.logger.LogInformation("GET call for fetching team members and channels from team roster is successful");
                 teamsChannelInfo.First(channel => channel.Name == null).Name = Strings.GeneralChannel;
-                var teamDetails = new
+
+                var teamDetails = new TeamDetail
                 {
-                    TeamMembers = teamsChannelAccounts.Select(member => new { content = member.Email, header = member.Name, aadobjectid = member.AadObjectId }),
-                    Channels = teamsChannelInfo.Select(member => new { ChannelId = member.Id, header = member.Name }),
+                    TeamMembers = teamsChannelAccounts
+                    .Select(
+                        member => new TeamMember
+                        {
+                            Content = member.Email,
+                            Header = member.Name,
+                            AzureAdObjectId = member.AadObjectId,
+                        }),
+                    Channels = teamsChannelInfo
+                    .Select(
+                        member => new TeamAccount
+                        {
+                            ChannelId = member.Id,
+                            Header = member.Name,
+                        }),
                 };
 
                 return this.Ok(teamDetails);
@@ -199,13 +213,13 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Controllers
             {
                 if (scrumConfigurationData == null)
                 {
-                    return this.BadRequest("No data received to be stored in Microsoft Azure Table storage");
+                    return this.BadRequest("The scrum configuration record is found as null.");
                 }
 
                 this.logger.LogInformation("Initiated call to scrum configuration storage provider.");
-                scrumConfigurationData = this.scrumHelper.GetScrumConfigurationEntities(scrumConfigurationData)?.ToList();
+                scrumConfigurationData = this.scrumHelper.ConstructScrumConfigurationEntities(scrumConfigurationData)?.ToList();
                 var result = await this.scrumConfigurationStorageProvider.StoreOrUpdateScrumConfigurationEntitiesAsync(scrumConfigurationData);
-                this.logger.LogInformation("POST call for saving scrum configuration details in storage is successful");
+                this.logger.LogInformation("POST call for saving scrum configuration details is successful");
                 return this.Ok(result);
             }
             catch (Exception ex)

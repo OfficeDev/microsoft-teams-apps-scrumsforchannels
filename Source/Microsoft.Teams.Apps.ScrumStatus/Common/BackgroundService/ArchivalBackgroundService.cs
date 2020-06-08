@@ -59,16 +59,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
         private readonly IOptionsMonitor<ExportOptions> exportOption;
 
         /// <summary>
-        /// Name of excel sheet which is exported.
-        /// </summary>
-        private readonly string exportedSheetName = "Scrum_Report";
-
-        /// <summary>
-        /// Name of data table for which scrum status has to be exported.
-        /// </summary>
-        private DataTable scrumStatusExportDataTable;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ArchivalBackgroundService"/> class.
         /// BackgroundService class that inherits IHostedService and implements the methods related to sending notification tasks.
         /// </summary>
@@ -125,7 +115,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
                 await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
             }
 
-            this.logger.LogError("Archival job execution has stopped.");
+            this.logger.LogInformation("Archival job execution has either stopped or did not executed .");
         }
 
         /// <summary>
@@ -134,12 +124,16 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
         /// <returns>A task that Enqueue sends notification task.</returns>
         private async Task GetArchivalDataAsync()
         {
+            // Name of excel sheet which is exported.
+            string exportedSheetName = "Scrum_Report";
+
+            DataTable scrumStatusExportDataTable;
             try
             {
                 List<ScrumExport> scrumToExport = new List<ScrumExport>();
                 string filePath = string.Empty;
                 string fileName = string.Empty;
-                var scrums = this.scrumStorageProvider.GetScrumDetailsByTimestampAsync().Result;
+                var scrums = await this.scrumStorageProvider.GetScrumDetailsByTimestampAsync();
                 if (scrums == null || !scrums.Any())
                 {
                     this.logger.LogInformation("Scrum obtained is null in archival job");
@@ -168,11 +162,12 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
                             PlanForToday = scrumExport.TodayTaskDescription,
                         }).ToList();
 
+                    var scrumTeamName = scrum.ScrumTeamConfigId.Split("_")[0];
                     fileName = this.GetCurrentTimestamp() + ".xlsx";
-                    filePath = $"{scrum.ChannelName}/ScrumReports/{scrum.ScrumTeamConfigId.Split("_")[0]}/{fileName}";
-                    using (this.scrumStatusExportDataTable = this.exportHelper.ConvertToDataTable(scrumToExport, this.exportedSheetName))
+                    filePath = $"{scrum.ChannelName}/ScrumReports/{scrumTeamName}/{fileName}";
+                    using (scrumStatusExportDataTable = this.exportHelper.ConvertToDataTable(scrumToExport, exportedSheetName))
                     {
-                        var uploadContext = await this.graphUtility.PutAsync(this.scrumStatusExportDataTable, filePath, driveDetails.Id);
+                        var uploadContext = await this.graphUtility.UpsertFileToDriveAsync(scrumStatusExportDataTable, filePath, driveDetails.Id);
                         if (uploadContext != null)
                         {
                             this.logger.LogInformation($"File uploaded- {fileName}");
@@ -262,13 +257,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
         /// Gets the last day of the month.
         /// </summary>
         /// <returns>Last day of the month.</returns>
-        private int GetLastDayOfMonth()
-        {
-            var date = DateTime.UtcNow;
-            var daysInMonth = DateTime.DaysInMonth(date.Year, date.Month);
-            var lastDay = new DateTime(date.Year, date.Month, daysInMonth);
-            this.logger.LogInformation($"Last day of the month obtained is : {lastDay}");
-            return lastDay.Day;
-        }
+        private int GetLastDayOfMonth() => DateTime.DaysInMonth(DateTime.UtcNow.Year, DateTime.UtcNow.Month);
     }
 }

@@ -21,12 +21,12 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         Task<Drive> GetDriveDetailsAsync(string groupId);
 
         /// <summary>
-        /// Method to post data to API.
+        /// Upload excel file to provided drive location path.
         /// </summary>
-        /// <param name="dataTable">Date table to be uploaded as excel sheet.</param>
+        /// <param name="dataTable">Data table to be uploaded as excel sheet.</param>
         /// <param name="filePath">File path to upload.</param>
         /// <param name="driveId">Id of the team's drive.</param>
         /// <returns>A task that represents a HTTP response message including the status code and data.</returns>
-        Task<string> PutAsync(DataTable dataTable, string filePath, string driveId);
+        Task<string> UpsertFileToDriveAsync(DataTable dataTable, string filePath, string driveId);
     }
 }

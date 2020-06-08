@@ -129,10 +129,8 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <returns>A task that represents the scrum data needs to be returned.</returns>
         public async Task<Scrum> GetActiveScrumAsync(string scrumTeamConfigId, string aadGroupId)
         {
-            Scrum activeScrum = null;
             var result = await this.scrumStorageProvider.GetScrumsByScrumTeamConfigIdAsync(scrumTeamConfigId, aadGroupId);
-            activeScrum = result.Where(scrum => scrum.IsCompleted == false).FirstOrDefault();
-            return activeScrum;
+            return result.Where(scrum => !scrum.IsCompleted).FirstOrDefault();
         }
 
         /// <summary>
@@ -140,21 +138,18 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// </summary>
         /// <param name="scrumConfigurationData">Scrum configuration entities received from client application. </param>
         /// <returns>Returns updated scrum configuration table storage entities to be saved in storage.</returns>
-        public IEnumerable<ScrumConfiguration> GetScrumConfigurationEntities(IEnumerable<ScrumConfiguration> scrumConfigurationData)
+        public IEnumerable<ScrumConfiguration> ConstructScrumConfigurationEntities(IEnumerable<ScrumConfiguration> scrumConfigurationData)
         {
+            scrumConfigurationData = scrumConfigurationData ?? throw new ArgumentNullException(nameof(scrumConfigurationData));
+
             try
             {
-                if (scrumConfigurationData == null)
-                {
-                    return null;
-                }
-
                 foreach (ScrumConfiguration scrumConfigurationDetails in scrumConfigurationData)
                 {
                     scrumConfigurationDetails.IsActive = scrumConfigurationDetails.IsActive;
                     scrumConfigurationDetails.CreatedOn = DateTime.UtcNow.ToString(Constants.Rfc3339DateTimeFormat, CultureInfo.InvariantCulture);
                     scrumConfigurationDetails.ScrumConfigurationId = string.IsNullOrEmpty(scrumConfigurationDetails.ScrumConfigurationId) ? Guid.NewGuid().ToString() : scrumConfigurationDetails.ScrumConfigurationId;
-                    scrumConfigurationDetails.ScrumTeamConfigId = $"{scrumConfigurationDetails?.ScrumTeamName}_{scrumConfigurationDetails?.ChannelId}";
+                    scrumConfigurationDetails.ScrumTeamConfigId = $"{scrumConfigurationDetails.ScrumTeamName}_{scrumConfigurationDetails.ChannelId}";
                     scrumConfigurationDetails.StartTime = DateTime.Parse(scrumConfigurationDetails.StartTime, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind).ToString(CultureInfo.CurrentCulture);
 
                     // Convert start time with user specified time zone to UTC and store UTC hour in storage. Scrum will be scheduled as per UTC hour.
@@ -184,12 +179,14 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         public async Task<bool> SaveScrumStatusDetailsAsync(ITurnContext<IInvokeActivity> turnContext, ScrumStatus scrumStatus, AdaptiveSubmitActionData adaptiveSubmitActionData, string scrumStartCardResponseId, string aadGroupId)
         {
             scrumStatus = scrumStatus ?? throw new ArgumentNullException(nameof(scrumStatus));
+            turnContext = turnContext ?? throw new ArgumentNullException(nameof(turnContext));
+
             scrumStatus.MembersActivityIdMap = adaptiveSubmitActionData?.ScrumMembers;
             scrumStatus.ScrumStartCardResponseId = scrumStartCardResponseId;
             scrumStatus.CreatedOn = DateTime.UtcNow.ToString(Constants.Rfc3339DateTimeFormat, CultureInfo.CurrentCulture);
-            scrumStatus.Username = turnContext?.Activity.From.Name;
+            scrumStatus.Username = turnContext.Activity.From.Name;
             scrumStatus.AadGroupId = aadGroupId;
-            scrumStatus.UserAadObjectId = turnContext?.Activity.From.AadObjectId;
+            scrumStatus.UserAadObjectId = turnContext.Activity.From.AadObjectId;
             return await this.scrumStatusStorageProvider.CreateOrUpdateScrumStatusAsync(scrumStatus);
         }
     }

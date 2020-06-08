@@ -35,7 +35,7 @@
     "appDescription": {
       "type": "string",
       "minLength": 1,
-      "defaultValue": "Scrums for Channels helps you get status updates from your team in channel scope",
+      "defaultValue": "Scrums for Channels helps you get status updates from your team.",
       "metadata": {
         "description": "App description."
       }
@@ -77,13 +77,13 @@
         "description": "The pricing tier for the hosting plan."
       }
     },
-    "AllowExport": {
+    "EnableScrumExport": {
       "type": "bool",
       "allowedValues": [
-        "true",
-        "false"
+        false,
+        true
       ],
-      "defaultValue": "bool('false')",
+      "defaultValue": false,
       "metadata": {
         "description": "Export the scrum details of last 30 days and requires application level permission i.e. Files.ReadWrite.All and Sites.ReadWrite.All."
       }
@@ -229,7 +229,7 @@
             },
             {
               "name": "Export:IsExportEnabled",
-              "value": "[parameters('AllowExport')]"
+              "value": "[parameters('EnableScrumExport')]"
             },
             {
               "name": "i18n:DefaultCulture",

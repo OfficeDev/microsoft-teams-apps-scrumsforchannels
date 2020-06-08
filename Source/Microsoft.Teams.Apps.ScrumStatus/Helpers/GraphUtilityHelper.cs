@@ -53,11 +53,11 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <summary>
         /// Upload file to given file path in Drive.
         /// </summary>
-        /// <param name="dataTable">Date table to be uploaded as excel sheet.</param>
+        /// <param name="dataTable">Data table to be uploaded as excel sheet.</param>
         /// <param name="filePath">File path to upload.</param>
         /// <param name="driveId">Id of the team's drive</param>
         /// <returns>A task that represents a HTTP response message including the status code and data.</returns>
-        public async Task<string> PutAsync(DataTable dataTable, string filePath, string driveId)
+        public async Task<string> UpsertFileToDriveAsync(DataTable dataTable, string filePath, string driveId)
         {
             using (XLWorkbook workbook = new XLWorkbook())
             {

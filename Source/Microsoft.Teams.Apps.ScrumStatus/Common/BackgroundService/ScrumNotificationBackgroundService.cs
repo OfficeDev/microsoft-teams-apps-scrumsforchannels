@@ -18,11 +18,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
     public sealed class ScrumNotificationBackgroundService : BackgroundService
     {
         /// <summary>
-        /// Date time format for UTC date time for comparison with scrum start time.
-        /// </summary>
-        private const string DateTimeFormat = "MM/dd/yyyy HH:mm";
-
-        /// <summary>
         /// Instance to send logs to the Application Insights service.
         /// </summary>
         private readonly ILogger<ScrumNotificationBackgroundService> logger;
@@ -64,54 +59,54 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                this.logger.LogInformation("Scrum notification service has started...");
-                await this.ProcessScheduledScrumNotificationAsync();
+                try
+                {
+                    this.logger.LogInformation("Scrum notification service has started...");
+                    await this.ProcessScheduledScrumNotificationAsync();
 
-                // Schedule next run in 5 minutes
-                CronExpression storageCronExpression = CronExpression.Parse("*/5 * * * *");
-                var next = storageCronExpression.GetNextOccurrence(DateTimeOffset.Now, TimeZoneInfo.Local);
-                var delay = next.HasValue ? next.Value - DateTimeOffset.Now : TimeSpan.FromMinutes(5);
-                await Task.Delay(delay, stoppingToken);
+                    // Schedule next run in 5 minutes
+                    CronExpression storageCronExpression = CronExpression.Parse("*/5 * * * *");
+                    var next = storageCronExpression.GetNextOccurrence(DateTimeOffset.Now, TimeZoneInfo.Local);
+                    var delay = next.HasValue ? next.Value - DateTimeOffset.Now : TimeSpan.FromMinutes(5);
+                    await Task.Delay(delay, stoppingToken);
+                }
+#pragma warning disable CA1031 // Catching general exceptions that might arise during execution to avoid blocking next run.
+                catch (Exception ex)
+#pragma warning restore CA1031 // Catching general exceptions that might arise during execution to avoid blocking next run.
+                {
+                    this.logger.LogError($"Exception occurred while executing scrum notification.", ex);
+                }
             }
         }
 
         private async Task ProcessScheduledScrumNotificationAsync()
         {
-            try
+            // get the current UTC hour schedule
+            // this is reading the data for current UTC hour from storage.
+            var scrumConfigurationDetails = await this.scrumConfigurationStorageProvider
+                .GetActiveScrumConfigurationsOfCurrentHourAsync();
+
+            if (scrumConfigurationDetails != null)
             {
-                // get the current UTC hour schedule
-                // this is reading the data for current UTC hour from storage.
-                var scrumConfigurationDetails = await this.scrumConfigurationStorageProvider
-                    .GetActiveScrumConfigurationsOfCurrentHourAsync();
+                // remove seconds from UTC date time to compare with scrum start time.
+                var dateTimeWithoutSeconds = DateTime.UtcNow.ToString("MM/dd/yyyy HH:mm", CultureInfo.InvariantCulture);
+                var schedulerTime = DateTime.Parse(dateTimeWithoutSeconds, CultureInfo.InvariantCulture);
 
-                if (scrumConfigurationDetails != null)
+                foreach (var scrumConfiguration in scrumConfigurationDetails)
                 {
-                    DateTimeOffset schedulerTime = DateTimeOffset.Parse(
-                        DateTime.UtcNow.ToString(DateTimeFormat, CultureInfo.InvariantCulture),
-                        CultureInfo.InvariantCulture,
-                        DateTimeStyles.None);
+                    // get scrum configured start time and time zone
+                    TimeZoneInfo userSpecifiedTimeZone = TimeZoneInfo.FindSystemTimeZoneById(scrumConfiguration.TimeZone);
+                    DateTime scheduledStartTime = TimeZoneInfo.ConvertTimeToUtc(DateTime.Parse(scrumConfiguration.StartTime, CultureInfo.InvariantCulture), userSpecifiedTimeZone);
 
-                    foreach (var scrumConfiguration in scrumConfigurationDetails)
+                    // if the start time is scheduled for next 5 minutes, then start processing else skip.
+                    // if the start window is missed, scrum will be skipped for the day and will be scheduled on next day.
+                    if (schedulerTime.TimeOfDay <= scheduledStartTime.TimeOfDay
+                        && schedulerTime.AddMinutes(5).TimeOfDay > scheduledStartTime.TimeOfDay)
                     {
-                        // get scrum configured start time and time zone
-                        TimeZoneInfo userSpecifiedTimeZone = TimeZoneInfo.FindSystemTimeZoneById(scrumConfiguration.TimeZone);
-                        DateTime scheduledStartTime = TimeZoneInfo.ConvertTimeToUtc(DateTime.Parse(scrumConfiguration.StartTime, CultureInfo.InvariantCulture), userSpecifiedTimeZone);
-
-                        // if the start time is scheduled for next 5 minutes, then start processing else skip
-                        if (schedulerTime.TimeOfDay <= scheduledStartTime.TimeOfDay
-                            && schedulerTime.AddMinutes(5).TimeOfDay > scheduledStartTime.TimeOfDay)
-                        {
-                            this.logger.LogInformation($"scrum for team {scrumConfiguration.ScrumTeamName} is ready to start {scheduledStartTime.TimeOfDay}");
-                            await this.startScrumActivityHelper.ScrumStartActivityAsync(scrumConfiguration);
-                        }
+                        this.logger.LogInformation($"scrum for team {scrumConfiguration.ScrumTeamName} is ready to start {scheduledStartTime.TimeOfDay}");
+                        await this.startScrumActivityHelper.ScrumStartActivityAsync(scrumConfiguration);
                     }
                 }
-            }
-#pragma warning disable CA1031 // Catching general exceptions that might arise during execution to avoid blocking next run.
-            catch (Exception ex)
-#pragma warning restore CA1031 // Catching general exceptions that might arise during execution to avoid blocking next run.
-            {
-                this.logger.LogError($"Exception occurred while executing scrum notification.", ex);
             }
         }
     }

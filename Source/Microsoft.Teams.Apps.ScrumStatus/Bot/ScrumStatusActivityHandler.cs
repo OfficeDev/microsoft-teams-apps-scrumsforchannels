@@ -159,10 +159,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus
                 var userWelcomeCardAttachment = WelcomeCard.GetWelcomeCardAttachmentForChannel(this.appBaseUri, this.localizer);
                 await turnContext.SendActivityAsync(MessageFactory.Attachment(userWelcomeCardAttachment), cancellationToken);
             }
-            else
-            {
-                this.logger.LogError("No members added in team.");
-            }
         }
 
         /// <summary>
@@ -210,7 +206,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus
                     case Constants.UpdateStatusTaskModuleCommand: // Command to show update scrum status page.
                         string aadGroupId = await this.activityHelper.GetTeamAadGroupIdAsync(turnContext, cancellationToken);
                         var scrumInfo = await this.scrumHelper.GetActiveScrumAsync(adaptiveSubmitActionData.ScrumTeamConfigId, aadGroupId);
-                        if (scrumInfo == null || scrumInfo.IsCompleted == true)
+                        if (scrumInfo == null || scrumInfo.IsCompleted)
                         {
                             this.logger.LogInformation($"The scrum is not running at this moment: {activity.Conversation.Id}");
                             return this.cardHelper.GetTaskModuleErrorResponse(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorScrumDoesNotExist"), activity.From.Name), this.localizer.GetString("UpdateStatusTitle"));
@@ -386,7 +382,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus
                     string scrumTeamConfigId = JObject.Parse(message.Value.ToString())["ScrumTeamConfigId"].ToString();
                     string aadGroupId = await this.activityHelper.GetTeamAadGroupIdAsync(turnContext, cancellationToken);
                     var scrumInfo = await this.scrumHelper.GetActiveScrumAsync(scrumTeamConfigId, aadGroupId);
-                    if (scrumInfo == null || scrumInfo.IsCompleted == true)
+                    if (scrumInfo == null || scrumInfo.IsCompleted)
                     {
                         await turnContext.SendActivityAsync(string.Format(CultureInfo.CurrentCulture, this.localizer.GetString("ErrorScrumDoesNotExist"), turnContext.Activity.From.Name), cancellationToken: cancellationToken);
                         break;
