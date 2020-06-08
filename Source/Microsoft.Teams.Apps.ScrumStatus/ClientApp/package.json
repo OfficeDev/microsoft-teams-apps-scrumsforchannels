@@ -12,13 +12,14 @@
 		"classnames": "^2.2.6",
 		"lodash": "4.17.15",
 		"moment": "2.26.0",
-		"node-sass": "^4.13.1",
+		"node-sass": "^4.14.1",
 		"react": "^16.10.2",
 		"react-appinsights": "^3.0.0-rc.6",
 		"react-dom": "^16.10.2",
 		"react-intl": "4.1.1",
 		"react-router": "5.2.0",
-		"react-router-dom": "5.2.0"
+		"react-router-dom": "5.2.0",
+		"websocket-extensions": "^0.1.4"
 	},
 	"scripts": {
 		"start": "react-scripts start",
