@@ -39,7 +39,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <summary>
         /// Represents channel conversation id.
         /// </summary>
-        public const string MsTeamsChannelId = "msteams";
+        public const string TeamsBotFrameworkChannelId = "msteams";
 
         /// <summary>
         /// Retry policy with jitter, Reference: https://github.com/Polly-Contrib/Polly.Contrib.WaitAndRetry#new-jitter-recommendation.
@@ -140,7 +140,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
 
                 var conversationReference = new ConversationReference()
                 {
-                    ChannelId = MsTeamsChannelId,
+                    ChannelId = TeamsBotFrameworkChannelId,
                     Bot = new ChannelAccount() { Id = $"28:{this.microsoftAppCredentials.MicrosoftAppId}" },
                     ServiceUrl = serviceUrl,
                     Conversation = new ConversationAccount() { ConversationType = Constants.ChannelConversationType, IsGroup = true, Id = scrumConfiguration.ChannelId, TenantId = this.options.Value.TenantId },
