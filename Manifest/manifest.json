@@ -1,0 +1,56 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.5/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.5",
+  "version": "1.0.0",
+  "id": "c683b4d3-97de-4331-8340-63fcd93b47e6",
+  "packageName": "com.microsoft.teams.scrumsforchannels",
+  "developer": {
+    "name": "<<companyName>>",
+    "websiteUrl": "<<websiteUrl>>",
+    "privacyUrl": "<<privacyUrl>>",
+    "termsOfUseUrl": "<<termsOfUseUrl>>"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "Scrums for Channels",
+    "full": "Scrums for Channels"
+  },
+  "description": {
+    "short": "Scrums for Channels helps you get status updates from your team.",
+    "full": "Scrums for Channels is a simple scrum assistant that will enable users to run asynchronous stand-up meetings and provide an easy way for the users to share their daily updates."
+  },
+  "accentColor": "#FFCCD8",
+  "bots": [
+    {
+      "botId": "<<botId>>",
+      "scopes": [
+        "team"
+      ],
+      "commandLists": [
+        {
+          "scopes": [
+            "team"
+          ],
+          "commands": [
+            {
+              "title": "Open settings",
+              "description": "Opens the settings task module to add or update scrums"
+            },
+            {
+              "title": "Help",
+              "description": "Shows the operations I can perform"
+            }
+          ]
+        }
+      ],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "validDomains": [
+    "<<valid domains>>"
+  ]
+}

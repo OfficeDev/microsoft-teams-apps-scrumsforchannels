@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="SettingsButtonText" xml:space="preserve">
+    <value>Settings</value>
+    <comment>Text to show on settings button.</comment>
+  </data>
+  <data name="HelpCardTitleText" xml:space="preserve">
+    <value>I want to help you! Select or type one of these commands:</value>
+    <comment>Title for Help card.</comment>
+  </data>
+  <data name="ErrorMessage" xml:space="preserve">
+    <value>Something went wrong and I can’t do that right now. Try again in a few minutes.</value>
+    <comment>Error message to show to user when error.</comment>
+  </data>
+  <data name="ScrumDetailsButtonText" xml:space="preserve">
+    <value>Scrum details</value>
+    <comment>Text to show on scrum details button.</comment>
+  </data>
+  <data name="SettingsTitle" xml:space="preserve">
+    <value>Settings</value>
+    <comment>Text to show in settings task module.</comment>
+  </data>
+  <data name="SettingsCardTitleText" xml:space="preserve">
+    <value>Go to Settings to add a new scrum or edit existing ones:</value>
+    <comment>Settings card title text.</comment>
+  </data>
+  <data name="ScrumDetailsTitle" xml:space="preserve">
+    <value>Scrum details</value>
+    <comment>Scrum details title text in scrum details task module.</comment>
+  </data>
+  <data name="WelcomeCardEndScrumTextDesc" xml:space="preserve">
+    <value>When you’re done, select End scrum at the bottom of the form. Once you end a scrum, no one can make any more updates to that scrum. Just start a new scrum when you’re ready to get status updates again.</value>
+    <comment>End scrum text description in welcome card.</comment>
+  </data>
+  <data name="WelcomeCardEndScrumTextHeading" xml:space="preserve">
+    <value>**End scrum**</value>
+    <comment>Sub heading text for end scrum in welcome card.</comment>
+  </data>
+  <data name="WelcomeCardSettingsButtonText" xml:space="preserve">
+    <value>Settings</value>
+    <comment>Settings button text in welcome card.</comment>
+  </data>
+  <data name="WelcomeCardStartScrumTextDesc" xml:space="preserve">
+    <value>When you ask me to start a scrum, I’ll create a form where people can enter their current status. Everyone can look at these updates.</value>
+    <comment>Start scrum text description in welcome card.</comment>
+  </data>
+  <data name="WelcomeCardStartScrumTextHeading" xml:space="preserve">
+    <value>**Start scrum**</value>
+    <comment>Sub heading text for start scrum in welcome card.</comment>
+  </data>
+  <data name="WelcomeCardSubtitleText" xml:space="preserve">
+    <value>I help you get status updates from your team. Everyone in the channel can participate.</value>
+    <comment>Welcome card subtitle text.</comment>
+  </data>
+  <data name="WelcomeCardTitle" xml:space="preserve">
+    <value>Welcome!</value>
+    <comment>Welcome card title text.</comment>
+  </data>
+  <data name="WelcomeCardWantToStartScrumText" xml:space="preserve">
+    <value>Want to start a scrum now?</value>
+    <comment>Want to start a scrum now in welcome card.</comment>
+  </data>
+  <data name="UpdateStatusAnyBlockersPlaceholder" xml:space="preserve">
+    <value>Enter info (300 characters max)</value>
+    <comment>Placeholder for any blockers input field on update status task module.</comment>
+  </data>
+  <data name="UpdateStatusAnyBlockersTitle" xml:space="preserve">
+    <value>Any blockers?</value>
+    <comment>Title for any blockers field on update status task module.</comment>
+  </data>
+  <data name="UpdateStatusSubmitButtonText" xml:space="preserve">
+    <value>Submit</value>
+    <comment>Text for submit button on update status task module.</comment>
+  </data>
+  <data name="UpdateStatusTodayDescriptionPlaceholder" xml:space="preserve">
+    <value>Enter info (300 characters max)</value>
+    <comment>Placeholder text for today task description input field on update status task module.</comment>
+  </data>
+  <data name="UpdateStatusTodayDescriptionTitle" xml:space="preserve">
+    <value>*What will you do today?</value>
+    <comment>Title for today task description field on update status task module.</comment>
+  </data>
+  <data name="UpdateStatusYesterdayDescriptionPlaceholder" xml:space="preserve">
+    <value>Enter info (300 characters max)</value>
+    <comment>Placeholder text for yesterday task description input field on update status task module.</comment>
+  </data>
+  <data name="UpdateStatusYesterdayDescriptionTitle" xml:space="preserve">
+    <value>*What did you do yesterday?</value>
+    <comment>Title for yesterday task description field on update status task module.</comment>
+  </data>
+  <data name="UpdateStatusTodayDescriptionErrorMessage" xml:space="preserve">
+    <value>This field can't be empty</value>
+    <comment>Error message for today task description field on update status task module.</comment>
+  </data>
+  <data name="UpdateStatusYesterdayDescriptionErrorMessage" xml:space="preserve">
+    <value>This field can't be empty</value>
+    <comment>Error message for yesterday task description field on update status task module.</comment>
+  </data>
+  <data name="UpdateStatusTitle" xml:space="preserve">
+    <value>Update status</value>
+    <comment>Title for update status task module.</comment>
+  </data>
+  <data name="EndScrumButtonText" xml:space="preserve">
+    <value>End scrum</value>
+    <comment>Text to show on end scrum button.</comment>
+  </data>
+  <data name="AddNewScrumButtonText" xml:space="preserve">
+    <value>Add a new scrum</value>
+    <comment>Text to show on add new scrum button on settings page.</comment>
+  </data>
+  <data name="AddToChannelTitle" xml:space="preserve">
+    <value>Channel</value>
+    <comment>Add to channel title on settings page.</comment>
+  </data>
+  <data name="ChannelNameValidationText" xml:space="preserve">
+    <value>Select channel</value>
+    <comment>Validation message for channel name on settings page.</comment>
+  </data>
+  <data name="DuplicateScrumValidationText" xml:space="preserve">
+    <value>A scrum has already been set up for this team and channel</value>
+    <comment>Validation message for duplicate scrum details on settings page.</comment>
+  </data>
+  <data name="MembersListTitle" xml:space="preserve">
+    <value>Scrum members</value>
+    <comment>Members list title on settings page.</comment>
+  </data>
+  <data name="SaveButtonText" xml:space="preserve">
+    <value>Save</value>
+    <comment>Text to show on save button on settings page.</comment>
+  </data>
+  <data name="SelectChannelPlaceholder" xml:space="preserve">
+    <value>Select channel</value>
+    <comment>Text to show in channel placeholder on settings page.</comment>
+  </data>
+  <data name="SelectTimePlaceholder" xml:space="preserve">
+    <value>Select time</value>
+    <comment>Text to show in start time placeholder on settings page.</comment>
+  </data>
+  <data name="SelectTimeZonePlaceholder" xml:space="preserve">
+    <value>Select time zone</value>
+    <comment>Text to show in time zone placeholder on settings page.</comment>
+  </data>
+  <data name="StartEveryDayTitle" xml:space="preserve">
+    <value>Daily start time</value>
+    <comment>Start every day title on settings page.</comment>
+  </data>
+  <data name="StartTimeValidationText" xml:space="preserve">
+    <value>Select daily start time</value>
+    <comment>Validation message for start time on settings page.</comment>
+  </data>
+  <data name="TeamMembersValidationText" xml:space="preserve">
+    <value>Add two or more team members</value>
+    <comment>Validation message for team members on settings page.</comment>
+  </data>
+  <data name="TeamNameTitle" xml:space="preserve">
+    <value>Team name</value>
+    <comment>Team name title on settings page.</comment>
+  </data>
+  <data name="TeamNameValidationText" xml:space="preserve">
+    <value>Team name can't be empty</value>
+    <comment>Validation message for team name on settings page.</comment>
+  </data>
+  <data name="TimeZoneTitle" xml:space="preserve">
+    <value>Time zone</value>
+    <comment>Time zone title on settings page.</comment>
+  </data>
+  <data name="TimeZoneValidationText" xml:space="preserve">
+    <value>Select a time zone</value>
+    <comment>Validation message for time zone on settings page.</comment>
+  </data>
+  <data name="ErrorSavingScrumData" xml:space="preserve">
+    <value>Something went wrong saving this info. Try again in a few minutes.</value>
+    <comment>Error message to show in saving scrum data.</comment>
+  </data>
+  <data name="ErrorUserIsNotPartOfRunningScrumAndTryToEndScrum" xml:space="preserve">
+    <value>{0}, only members of this scrum can do this. Ask a colleague to add you.</value>
+    <comment>Error message to show that user is not part of running scrum and clicks on end scrum.</comment>
+  </data>
+  <data name="UpdateStatusButtonText" xml:space="preserve">
+    <value>Update status</value>
+    <comment>Text to show on update status button.</comment>
+  </data>
+  <data name="ScrumDetailsAnyBlockersTitle" xml:space="preserve">
+    <value>Any blockers?</value>
+    <comment>Title for any blockers field on scrum details task module.</comment>
+  </data>
+  <data name="ScrumDetailsTodayTaskDescriptionTitle" xml:space="preserve">
+    <value>What will you do today?</value>
+    <comment>Title for today task description field on scrum details task module.</comment>
+  </data>
+  <data name="ScrumDetailsYesterdayTaskDescriptionTitle" xml:space="preserve">
+    <value>What did you do yesterday?</value>
+    <comment>Title for yesterday task description field on scrum details task module.</comment>
+  </data>
+  <data name="BotFailureTitle" xml:space="preserve">
+    <value>Bot failure</value>
+    <comment>Bot failure title on task module when bot fails.</comment>
+  </data>
+  <data name="TaskModuleInvalidCommandText" xml:space="preserve">
+    <value>Invalid command for task module fetch activity. Command is: {0}</value>
+    <comment>Invalid command text in task module fetch action.</comment>
+  </data>
+  <data name="ScrumStatusCompletedForUser" xml:space="preserve">
+    <value>Completed</value>
+    <comment>Text for scrum status as "Completed" to be shown for each participants in scrum details task module.</comment>
+  </data>
+  <data name="ScrumStatusNotStarted" xml:space="preserve">
+    <value>Not started</value>
+    <comment>Text for scrum status as "Not started" to be shown in scrum details task module.</comment>
+  </data>
+  <data name="ScrumDetailsRespondedVsTotalUserStatus" xml:space="preserve">
+    <value>Status: {0} / {1} completed</value>
+    <comment>Text to show responded vs total user count in scrum details task module.</comment>
+  </data>
+  <data name="StartScrumCardBlockedText" xml:space="preserve">
+    <value>{0} people have reported being blocked...</value>
+    <comment>Text to show in the middle of the start scrum card when any first status is updated.</comment>
+  </data>
+  <data name="StartScrumCardWelcomeText" xml:space="preserve">
+    <value>Hey guys! Can't wait to hear from you fellows...</value>
+    <comment>Text to show in the middle of the start scrum card when it is sent for the first time in a day.</comment>
+  </data>
+  <data name="ScrumRunningStatusActive" xml:space="preserve">
+    <value>Active</value>
+    <comment>Text that represents scrum is active.</comment>
+  </data>
+  <data name="ScrumRunningStatusClosed" xml:space="preserve">
+    <value>Closed</value>
+    <comment>Text that represents scrum is completed.</comment>
+  </data>
+  <data name="ErrorScrumConfigurationDetailsNullOrInactive" xml:space="preserve">
+    <value>{0}, this scrum has been deleted or inactive.</value>
+    <comment>Error message to show if scrum configuration details are null or scrum is inactive.</comment>
+  </data>
+  <data name="ErrorScrumDoesNotExist" xml:space="preserve">
+    <value>{0}, this scrum has been deleted.</value>
+    <comment>Error message to show when scrum does not exist.</comment>
+  </data>
+  <data name="DeleteButtonText" xml:space="preserve">
+    <value>Delete</value>
+    <comment>Text to show on delete button on settings page.</comment>
+  </data>
+  <data name="ScrumEnableButtonTitle" xml:space="preserve">
+    <value>Enable</value>
+    <comment>Text to show on scrum enable button on settings page.</comment>
+  </data>
+  <data name="SelectUserPlaceholder" xml:space="preserve">
+    <value>Select User</value>
+    <comment>Placeholder text for members list dropdown on settings page.</comment>
+  </data>
+  <data name="SuccessMessageAfterEndingScrum" xml:space="preserve">
+    <value>Nice work! This scrum is completed.</value>
+    <comment>Success message to show to user when scrum is ended.</comment>
+  </data>
+  <data name="ScrumDetailsUserIsBlocked" xml:space="preserve">
+    <value>(Blocked!)</value>
+    <comment>Text to show when user is blocked in scrum details task module.</comment>
+  </data>
+  <data name="CancelButtonText" xml:space="preserve">
+    <value>Cancel</value>
+    <comment>Text to show on cancel button on settings page.</comment>
+  </data>
+  <data name="NoMatchesFoundText" xml:space="preserve">
+    <value>We couldn't find any matches.</value>
+    <comment>Text to show when there are no matches to condition.</comment>
+  </data>
+  <data name="ErrorUserIsNotPartOfRunningScrumAndTryUpdateStatus" xml:space="preserve">
+    <value>{0}, only members of this scrum can do this. Ask a colleague to add you.</value>
+    <comment>Error message to show that user is not part of running scrum and clicks on update status.</comment>
+  </data>
+  <data name="ErrorScrumDeleted" xml:space="preserve">
+    <value>{0} scrum has been deleted.</value>
+    <comment>Error message to show when scrum configuration details have been deleted from storage.</comment>
+  </data>
+  <data name="ErrorNoScrumMembersPresent" xml:space="preserve">
+    <value>No scrum members present in this scrum.</value>
+    <comment>Error message to show when there are no scrum members in the scrum.</comment>
+  </data>
+  <data name="GeneralChannel" xml:space="preserve">
+    <value>General</value>
+  </data>
+</root>
