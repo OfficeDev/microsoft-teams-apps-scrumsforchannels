@@ -104,18 +104,24 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         }
 
         /// <summary>
-        /// Get scrum configuration details which need to be scheduled in next 1 hour by start scrum background service.
+        /// Get scrum configuration details which need to be scheduled by current and previous UTC hour by start scrum background service.
+        /// Hours are adjusted to honor daylight savings changes when applicable.
         /// </summary>
         /// <returns>Returns collection of scrum configuration details.</returns>
-        public async Task<IEnumerable<ScrumConfiguration>> GetActiveScrumConfigurationsOfCurrentHourAsync()
+        public async Task<IEnumerable<ScrumConfiguration>> GetActiveScrumConfigurationsByUtcHourAsync()
         {
             try
             {
                 int currentUtcHour = DateTime.UtcNow.Hour;
                 await this.EnsureInitializedAsync();
                 string isActiveFilter = TableQuery.GenerateFilterConditionForBool(nameof(ScrumConfiguration.IsActive), QueryComparisons.Equal, true);
-                string timeFilter = TableQuery.GenerateFilterConditionForInt(nameof(ScrumConfiguration.StartTimeUTCHour), QueryComparisons.Equal, currentUtcHour);
-                var combinedFilter = TableQuery.CombineFilters(isActiveFilter, TableOperators.And, timeFilter);
+                string currentUtcHourFilter = TableQuery.GenerateFilterConditionForInt(nameof(ScrumConfiguration.StartTimeUTCHour), QueryComparisons.Equal, currentUtcHour);
+
+                // This filter is added to handle day light saving scenarios.
+                // This will ensure scrum will not get skipped in daylight saving and scheduler will continue to send start scrum card at specified time.
+                string previousUtcHourFilter = TableQuery.GenerateFilterConditionForInt(nameof(ScrumConfiguration.StartTimeUTCHour), QueryComparisons.Equal, currentUtcHour - 1);
+                var utcHourFilter = TableQuery.CombineFilters(currentUtcHourFilter, TableOperators.Or, previousUtcHourFilter);
+                var combinedFilter = TableQuery.CombineFilters(isActiveFilter, TableOperators.And, utcHourFilter);
 
                 TableQuery<ScrumConfiguration> query = new TableQuery<ScrumConfiguration>().Where(combinedFilter);
                 TableContinuationToken continuationToken = null;

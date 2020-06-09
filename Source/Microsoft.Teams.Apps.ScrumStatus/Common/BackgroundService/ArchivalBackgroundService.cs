@@ -167,7 +167,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
                     filePath = $"{scrum.ChannelName}/ScrumReports/{scrumTeamName}/{fileName}";
                     using (scrumStatusExportDataTable = this.exportHelper.ConvertToDataTable(scrumToExport, exportedSheetName))
                     {
-                        var uploadContext = await this.graphUtility.UpsertFileToDriveAsync(scrumStatusExportDataTable, filePath, driveDetails.Id);
+                        var uploadContext = await this.graphUtility.UploadFileAsync(scrumStatusExportDataTable, filePath, driveDetails.Id);
                         if (uploadContext != null)
                         {
                             this.logger.LogInformation($"File uploaded- {fileName}");

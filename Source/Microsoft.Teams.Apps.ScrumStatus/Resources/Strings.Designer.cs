@@ -529,7 +529,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Any Blockers?.
+        ///   Looks up a localized string similar to Any blockers?.
         /// </summary>
         public static string UpdateStatusAnyBlockersTitle {
             get {

@@ -182,7 +182,7 @@
     <comment>Placeholder for any blockers input field on update status task module.</comment>
   </data>
   <data name="UpdateStatusAnyBlockersTitle" xml:space="preserve">
-    <value>Any Blockers?</value>
+    <value>Any blockers?</value>
     <comment>Title for any blockers field on update status task module.</comment>
   </data>
   <data name="UpdateStatusSubmitButtonText" xml:space="preserve">

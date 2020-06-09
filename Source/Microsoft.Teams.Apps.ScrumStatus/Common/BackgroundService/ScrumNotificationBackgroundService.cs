@@ -84,7 +84,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common.BackgroundService
             // get the current UTC hour schedule
             // this is reading the data for current UTC hour from storage.
             var scrumConfigurationDetails = await this.scrumConfigurationStorageProvider
-                .GetActiveScrumConfigurationsOfCurrentHourAsync();
+                .GetActiveScrumConfigurationsByUtcHourAsync();
 
             if (scrumConfigurationDetails != null)
             {

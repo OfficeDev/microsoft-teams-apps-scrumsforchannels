@@ -39,23 +39,13 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <summary>
         /// Represents channel conversation id.
         /// </summary>
-        public const string ChannelConversationId = "msteams";
-
-        /// <summary>
-        /// Represents retry delay.
-        /// </summary>
-        private const int RetryDelay = 1000;
-
-        /// <summary>
-        /// Represents retry count.
-        /// </summary>
-        private const int RetryCount = 2;
+        public const string MsTeamsChannelId = "msteams";
 
         /// <summary>
         /// Retry policy with jitter, Reference: https://github.com/Polly-Contrib/Polly.Contrib.WaitAndRetry#new-jitter-recommendation.
         /// </summary>
         private static readonly AsyncRetryPolicy RetryPolicy = Policy.Handle<Exception>()
-          .WaitAndRetryAsync(Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromMilliseconds(RetryDelay), RetryCount));
+          .WaitAndRetryAsync(Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromMilliseconds(1000), 2));
 
         /// <summary>
         /// An instance of card helper to send class details.
@@ -150,7 +140,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
 
                 var conversationReference = new ConversationReference()
                 {
-                    ChannelId = ChannelConversationId,
+                    ChannelId = MsTeamsChannelId,
                     Bot = new ChannelAccount() { Id = $"28:{this.microsoftAppCredentials.MicrosoftAppId}" },
                     ServiceUrl = serviceUrl,
                     Conversation = new ConversationAccount() { ConversationType = Constants.ChannelConversationType, IsGroup = true, Id = scrumConfiguration.ChannelId, TenantId = this.options.Value.TenantId },
@@ -350,7 +340,7 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Helpers
         /// <param name="scrumConfiguration">An instance of scrum configuration details.</param>
         /// <param name="turnContext">Context object containing information cached for a single turn of conversation with a user.</param>
         /// <param name="cancellationToken">Propagates notification that operations should be canceled.</param>
-        /// <returns>void.</returns>
+        /// <returns>A task that represents the work queued to execute.</returns>
         private async Task CreateScrumAsync(string scrumStartCardResponseId, string scrumCardId, string members, ScrumConfiguration scrumConfiguration, ITurnContext turnContext, CancellationToken cancellationToken)
         {
             string conversationId = turnContext.Activity.Conversation.Id;

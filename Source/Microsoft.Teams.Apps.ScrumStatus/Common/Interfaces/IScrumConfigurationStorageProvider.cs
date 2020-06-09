@@ -36,10 +36,10 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         Task<IEnumerable<ScrumConfiguration>> GetScrumConfigurationDetailsbyAADGroupIDAsync(string aadGroupId);
 
         /// <summary>
-        /// Get scrum configuration details which need to be scheduled in next 1 hour by start scrum background service.
+        /// Get scrum configuration details which need to be scheduled by current and previous UTC hour by start scrum background service.
         /// </summary>
         /// <returns>Returns collection of scrum configuration details.</returns>
-        Task<IEnumerable<ScrumConfiguration>> GetActiveScrumConfigurationsOfCurrentHourAsync();
+        Task<IEnumerable<ScrumConfiguration>> GetActiveScrumConfigurationsByUtcHourAsync();
 
         /// <summary>
         /// Delete an entity from Microsoft Azure Table storage.

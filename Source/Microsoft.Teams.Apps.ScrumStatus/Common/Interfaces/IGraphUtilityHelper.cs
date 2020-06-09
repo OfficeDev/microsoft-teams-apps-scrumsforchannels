@@ -27,6 +27,6 @@ namespace Microsoft.Teams.Apps.ScrumStatus.Common
         /// <param name="filePath">File path to upload.</param>
         /// <param name="driveId">Id of the team's drive.</param>
         /// <returns>A task that represents a HTTP response message including the status code and data.</returns>
-        Task<string> UpsertFileToDriveAsync(DataTable dataTable, string filePath, string driveId);
+        Task<string> UploadFileAsync(DataTable dataTable, string filePath, string driveId);
     }
 }
