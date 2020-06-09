@@ -13,15 +13,15 @@ urlFragment: microsoft-teams-apps-scrumsforchannels
 | [Documentation](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Home) | [Deployment guide](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Deployment-Guide) | [Architecture](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Solution-Overview) |
 | ---- | ---- | ---- |
 
-Scrums for Channels is a simple scrum assistant bot that enables users to run and schedule stand-up meetings and provide an easy way to share daily updates. The bot works in team channels and all members who have been added to a scrum team can participate in the scrum.
-The bot works great for teams that have members participating from varied geographical locations, different time zones or even fully remote teams. 
+Scrums for Channels is a simple scrum assistant application that enables users to run and schedule stand-up meetings and provide an easy way to share daily updates. The bot works in team channels and all members who have been added to a scrum team can participate in the scrum.
+The app works great for teams that have members participating from varied geographical locations, different time zones or even fully remote teams. 
 
 Using the Scrums for Channels app in Microsoft Teams, users will be able to:
  -  Schedule a scrum at a given time based on a time zone 
  -  Select the team members who will be part of the scrum
  -  Run scrums in a channel
  -  Configure multiple scrums to run in different or same channels
- -  Export scrum details for the past 30 days in xlsx file
+ -  If the setting is enabled, Export scrum details for the past 30 days in xlsx file
 
  **App workflow**
 
