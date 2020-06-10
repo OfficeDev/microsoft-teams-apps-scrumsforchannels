@@ -10,7 +10,14 @@
     <TypeScriptBuildMode>true</TypeScriptBuildMode>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Common\BackgroundService\StartScrumBackgroundService.cs" />
+    <Compile Remove="%2a%2a\**" />
+    <Content Remove="%2a%2a\**" />
+    <EmbeddedResource Remove="%2a%2a\**" />
+    <None Remove="%2a%2a\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="%2a%2a\%2a.config" />
+    <Content Remove="%2a%2a\%2a.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\Build\stylecop.json" Link="stylecop.json" />
@@ -59,12 +66,6 @@
     <TypeScriptToolsVersion>Latest</TypeScriptToolsVersion>
     <TypeScriptBuildMode>true</TypeScriptBuildMode>
   </PropertyGroup>
-  <ItemGroup>
-    <Folder Include="Cards\" />
-    <Folder Include="Helpers\" />
-    <Folder Include="Properties\" />
-    <Folder Include="wwwroot\Artifacts\" />
-  </ItemGroup>
 
   <ItemGroup>
     <AdditionalFiles Include="..\..\Build\stylecop.json" Link="stylecop.json">
