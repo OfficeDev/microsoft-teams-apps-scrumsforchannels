@@ -10,16 +10,6 @@
     <TypeScriptBuildMode>true</TypeScriptBuildMode>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="%2a%2a\**" />
-    <Content Remove="%2a%2a\**" />
-    <EmbeddedResource Remove="%2a%2a\**" />
-    <None Remove="%2a%2a\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Remove="%2a%2a\%2a.config" />
-    <Content Remove="%2a%2a\%2a.cshtml" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="..\..\Build\stylecop.json" Link="stylecop.json" />
   </ItemGroup>
   <ItemGroup>
