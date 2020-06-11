@@ -13,28 +13,20 @@ urlFragment: microsoft-teams-apps-scrumsforchannels
 | [Documentation](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Home) | [Deployment guide](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Deployment-Guide) | [Architecture](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Solution-Overview) |
 | ---- | ---- | ---- |
 
-Scrums for Channels is a simple scrum assistant application that enables users to run and schedule stand-up meetings and provide an easy way to share daily updates. The bot works in team channels and all members who have been added to a scrum team can participate in the scrum.
-The app works great for teams that have members participating from varied geographical locations, different time zones or even fully remote teams. 
+Scrums for Channels is a scrum assistant app that enables users to schedule and run scrum meetings within Microsoft Teams.  The app is installed in a team scope and all members who have been added to a scrum team can participate in the scrum.
+The app works great for teams that have members participating remotely from varied geographical locations or different time zones. 
 
-Using the Scrums for Channels app in Microsoft Teams, users will be able to:
- -  Schedule a scrum at a given time based on a time zone 
- -  Select the team members who will be part of the scrum
+With the Scrums for Channels app in Microsoft Teams, users can:
  -  Run scrums in a channel
- -  Configure multiple scrums to run in different or same channels
- -  If the setting is enabled, Export scrum details for the past 30 days in xlsx file
+ -  Schedule a scrum at a specified time based on a time zone 
+ -  Select the team members who will be part of the scrum
+ -  Configure multiple scrums to run in different channels
+ -  Export scrum details for the past 30 days in a CSV file
 
- **App workflow**
-
--	Tony is a Project lead in Contoso Technologies and leads multiple teams that are spread across multiple locations and time zones. He uses the Scrums for Channels app in Microsoft Teams to setup scrums and enable all his team members to share their daily work updates in an easy and concise manner
--	Once the app is installed, he opens the settings screen using the command ‘Open settings’ which will allow him to configure a scrum
--	He will select the required team members, the start time of the scrum, the time zone in which the scrum will be initiated and the channel for scrum updates 
--	He can choose to configure multiple scrums if required by selecting different team members
--	The app auto starts a scrum as per the schedule and sends an adaptive card with scrum details in the channel as configured and notify all the associated team members. 
--	The adaptive card will display scrum summary details like no of people who contributed to the scrum, the status of the scrum and no of team members that are blocked, if any. 
--	All the team members will be able to update their individual details and see what others in the team have posted through action buttons on the adaptive card. On every update, the card is refreshed to reflect the current scrum status
--	Anyone in the team can end a scrum at a given point in time. Once a scrum ends, the card will be refreshed reflecting the scrum status as Closed
--	The app will initiate the scrum again the next day at the scheduled time. If the previous scrum is still active, it will mark that as Closed before starting a new scrum
-
+A typical scrum workflow using the app will be:
+1. The app auto starts the scrum at the specified time
+2. An adaptive card is posted on the channel with buttons to share status updates, view details entered by other scrum members, and to end the scrum. The card also displays the status of the scrum (active or closed), the number of participants who have contributed to the scrum or have marked their status as blocked
+3. Users can choose to share their updates, view details updated by other team members and end the scrum
 
 Here are some screenshots of a user interacting with Scrums for Channels :
 
@@ -50,6 +42,8 @@ Here are some screenshots of a user interacting with Scrums for Channels :
 **View details updated by you and others**
 
 ![Scrum details task module screen](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforchannels/wiki/Images/ScrumDetails.png)
+
+If you need to conduct a scrum in a Teams group chat instead of a channel, check out the [Scrums for Group Chat](https://github.com/OfficeDev/microsoft-teams-apps-scrumsforgroupchat) app template.
 
 ## Legal notice
 
